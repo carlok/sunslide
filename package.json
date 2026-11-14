@@ -30,7 +30,7 @@
     "playwright": "^1.49.0",
     "vite": "^6.4.1",
     "vitest": "^3.2.4",
-    "@lhci/cli": "^0.14.0",
+    "@lhci/cli": "^0.16.0",
     "chrome-launcher": "^1.1.2"
   }
 }

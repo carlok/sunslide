@@ -98,7 +98,7 @@ function syncSky(){
   moonL.position.copy(_e2).multiplyScalar(5); moon.position.copy(_e2).multiplyScalar(30);
 }
 function updateCameraTarget(dt){
-  if(state==='title'||state==='over'){ camLon=mod(camLon+dt*0.12,TAU); camLat+=(0.3-camLat)*Math.min(1,dt); zoomTarget=1; }
+  if(state==='title'||state==='over'){ camLon=mod(camLon+dt*0.12,TAU); camLat+=(CAMERA.titleCamLat-camLat)*Math.min(1,dt); zoomTarget=1; }
   else {
     const w=actorWorld(player), k=Math.min(1,dt*(state==='warp'?(REDUCED?3:4):(REDUCED?3:5)));
     camLon=mod(camLon+angD(gx2lon(w[0])-camLon)*k,TAU); camLat+=(gy2lat(w[1])-camLat)*k;
@@ -107,18 +107,19 @@ function updateCameraTarget(dt){
   zoomT+=(zoomTarget-zoomT)*Math.min(1,dt*(REDUCED?6:(state==='warp'?4.5:2.4)));
 }
 function placeCamera(){
-  const z=smooth(clamp(zoomT,0,1)), D=1.3, pitch=58*DEG;
+  const z=smooth(clamp(zoomT,0,1));
+  const off=closeCameraOffset();
   latLonFrame(camLat,camLon,_e1,_E2,_N2);
-  _tA.copy(_e1).addScaledVector(_N2,0.1);
-  _pA.copy(_tA).addScaledVector(_e1,D*Math.sin(pitch)).addScaledVector(_N2,-D*Math.cos(pitch));
+  _tA.copy(_e1).addScaledVector(_N2,CAMERA.lookTargetLift);
+  _pA.copy(_tA).addScaledVector(_e1,off.alongTangent).addScaledVector(_N2,off.alongNormal);
   _uA.copy(_N2);
-  latLonFrame(camLat*0.55,camLon,_e2,_E2,_N2);
-  const dFar=Math.max(3.05,1.2/(Math.tan(19*DEG)*Math.min(1,camera.aspect)));
+  latLonFrame(camLat*CAMERA.farCamLatScale,camLon,_e2,_E2,_N2);
+  const dFar=farOrbitDistance(camera.aspect);
   _pB.copy(_e2).multiplyScalar(dFar); _tB.set(0,0,0); _uB.copy(_N2);
   camera.position.lerpVectors(_pA,_pB,z); _tC.lerpVectors(_tA,_tB,z);
   if(shakeT>0&&!REDUCED){ const a=shakeT*0.03; camera.position.x+=(Math.random()-0.5)*a; camera.position.y+=(Math.random()-0.5)*a; camera.position.z+=(Math.random()-0.5)*a; }
   camera.up.lerpVectors(_uA,_uB,z).normalize(); camera.lookAt(_tC);
-  camera.fov=lerp(46,38,z); camera.updateProjectionMatrix();
+  camera.fov=lerp(CAMERA.fovCloseDeg,CAMERA.fovFarDeg,z); camera.updateProjectionMatrix();
 }
 function syncScene(time,dt){
   U.time.value=time;

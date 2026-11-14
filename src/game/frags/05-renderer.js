@@ -33,8 +33,9 @@ const TEX_GLOW=radial([[0,'rgba(255,255,255,1)'],[0.22,'rgba(255,255,255,.5)'],[
 const additive=(map,color)=>new THREE.SpriteMaterial({map,color,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true});
 
 /* ---------- post-processing ---------- */
-const rt=new THREE.WebGLRenderTarget(4,4,{type:THREE.HalfFloatType,samples:4});
-const composer=new EffectComposer(renderer,rt);
+// EffectComposer owns half-float ping-pong targets. Do not pass a multisampled RT
+// (samples>0): on large desktop buffers many GPUs fail MSAA resolve and show black macro-tiles.
+const composer=new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene,camera));
 const bloom=new UnrealBloomPass(new THREE.Vector2(256,256),0.45,0.35,1.0);
 composer.addPass(bloom); composer.addPass(new OutputPass());

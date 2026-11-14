@@ -4,6 +4,8 @@ import { mkdirSync, existsSync } from 'node:fs';
 import { spawn } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { readFileSync } from 'node:fs';
+import { analyzeStagePng } from './png-luma.mjs';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const out = path.join(root, 'tests', 'out');
@@ -87,9 +89,11 @@ startPreview();
 await waitForServer();
 
 const VIEWPORTS = [
-  { name: 'desktop', width: 1280, height: 800, deviceScaleFactor: 1, hasTouch: false, isMobile: false },
-  { name: 'phone-portrait', width: 390, height: 780, deviceScaleFactor: 2, hasTouch: true, isMobile: true },
-  { name: 'phone-landscape', width: 844, height: 390, deviceScaleFactor: 2, hasTouch: true, isMobile: true },
+  { name: 'desktop', width: 1280, height: 800, deviceScaleFactor: 1, hasTouch: false, isMobile: false, quality: 1 },
+  { name: 'desktop-4k', width: 2560, height: 1440, deviceScaleFactor: 1, hasTouch: false, isMobile: false, quality: 2, large: true },
+  { name: 'desktop-4k-dpr2', width: 1920, height: 1080, deviceScaleFactor: 2, hasTouch: false, isMobile: false, quality: 2, large: true },
+  { name: 'phone-portrait', width: 390, height: 780, deviceScaleFactor: 2, hasTouch: true, isMobile: true, quality: 1 },
+  { name: 'phone-landscape', width: 844, height: 390, deviceScaleFactor: 2, hasTouch: true, isMobile: true, quality: 1 },
 ];
 
 const browser = await chromium.launch({
@@ -111,7 +115,7 @@ const fail = (msg) => {
 
 try {
   for (const vp of VIEWPORTS) {
-    const { name, ...opts } = vp;
+    const { name, quality, large, ...opts } = vp;
     const ctx = await browser.newContext({
       viewport: { width: opts.width, height: opts.height },
       ...opts,
@@ -127,10 +131,11 @@ try {
   // 'load' only — networkidle can hang on WebGL / rAF; gameplay readiness uses __sunslide.
     await page.goto(baseUrl, { waitUntil: 'load', timeout: 60_000 });
     await page.waitForFunction(() => !!window.__sunslide, null, { timeout: 30_000 });
-    await page.evaluate(() => window.__sunslide.setQuality(1));
-    await page.click('#go', { timeout: 10_000 });
+    await page.evaluate((q) => window.__sunslide.setQuality(q), quality ?? 1);
+    await page.click('#go', { timeout: 10_000, noWaitAfter: true });
     await page.waitForTimeout(800);
 
+    const simTicks = large ? Math.min(SIM_TICKS, 2800) : SIM_TICKS;
     const res = await page.evaluate(
       ({ ticks }) => {
         const S = window.__sunslide;
@@ -156,7 +161,7 @@ try {
         const leftSum = S.tiles.reduce((a, t) => a + t.left, 0);
         return { state: S.state, dotsLeft: S.dotsLeft, counted, leftSum, batLeaks, warps };
       },
-      { ticks: SIM_TICKS },
+      { ticks: simTicks },
       { timeout: 120_000 },
     );
     console.log(name, res);
@@ -180,8 +185,57 @@ try {
     if (!layout.mapVisible) fail(`${name}: map not visible`);
     if (layout.overflowX || layout.overflowY) fail(`${name}: page overflows the viewport`);
 
-    await page.waitForTimeout(400);
-    await page.screenshot({ path: path.join(out, `${name}.png`), timeout: 30_000 });
+    if (large) {
+      await page.evaluate(() => {
+        const S = window.__sunslide;
+        for (let i = 0; i < 150; i++) S.update(1 / 60);
+      });
+      await page.waitForTimeout(400);
+    }
+
+    const stageShot = path.join(out, `${name}-stage.png`);
+    const stageBox = await page.locator('#stage').boundingBox();
+    if (!stageBox) fail(`${name}: #stage not found for screenshot`);
+    else {
+      const clip = {
+        x: stageBox.x,
+        y: stageBox.y,
+        width: stageBox.width,
+        height: stageBox.height,
+      };
+      await page.screenshot({
+        path: stageShot,
+        clip,
+        animations: 'disabled',
+        timeout: 60_000,
+      });
+    }
+    await page.screenshot({
+      path: path.join(out, `${name}.png`),
+      timeout: large ? 90_000 : 30_000,
+      animations: 'disabled',
+    });
+    if (large) {
+      const luma = analyzeStagePng(readFileSync(stageShot));
+      console.log(name, 'render-luma', luma);
+      if (!luma.ok) {
+        const why = luma.noScene
+          ? `scene did not render (mean=${luma.mean.toFixed(1)} hiFrac=${(luma.hiFrac * 100).toFixed(2)}%)`
+          : `macro black tiles (deadArea=${(luma.macro.deadAreaFrac * 100).toFixed(1)}% bright=${luma.macro.hasBrightSignal})`;
+        fail(`${name}: ${why}`);
+      }
+      const metrics = await page.evaluate(() => window.__sunslide.getRenderMetrics());
+      console.log(name, 'render-metrics', metrics);
+      const [cw, ch] = metrics.canvasBuffer;
+      const [rw, rh] = metrics.composerRT;
+      if (!metrics.useBloom) fail(`${name}: expected bloom on for large desktop regression`);
+      if (Math.abs(rw - cw) > 2 || Math.abs(rh - ch) > 2) {
+        fail(`${name}: composer RT ${rw}x${rh} != canvas buffer ${cw}x${ch}`);
+      }
+      if (metrics.pixelRatio < 0.74 && metrics.stageCss[0] * metrics.stageCss[1] > 1.2e6) {
+        fail(`${name}: pixelRatio ${metrics.pixelRatio} too low for bloom on large stage`);
+      }
+    }
     if (errors.length) fail(`${name}: console errors\n  ` + errors.slice(0, 5).join('\n  '));
     await ctx.close();
   }

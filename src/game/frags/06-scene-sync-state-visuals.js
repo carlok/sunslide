@@ -21,23 +21,25 @@ function syncEcology(){
     const T=tiles[cell.tileId]; if(!T) continue;
     const p=tilePos(T), lf=liftOf(T), g=smooth(clamp((gameClock-cell.growAt)/growT,0,1)), pop=0.1+0.9*g;
     frameAt(p.x+cell.x+0.5,p.y+cell.y+0.5);
-    surfMatrix(_M,_R,0,0.9*pop,0.022*pop,0.9*pop,1+lf+0.004);
+    surfMatrix(_M,_R,0,CELL_TANGENT.sx*pop,PATCH_THICK*pop,CELL_TANGENT.sz*pop,1+lf+PATCH_LIFT*pop);
     ecoPatches.setMatrixAt(pi++,_M);
     for(const d of cell.decor){
-      const gx=p.x+cell.x+0.5+(d.lx-0.5)*0.82, gy=p.y+cell.y+0.5+(d.ly-0.5)*0.82;
+      const off=decorLocalOffset(d);
+      const gx=p.x+cell.x+0.5+off.x, gy=p.y+cell.y+0.5+off.y;
+      const sc=decorTangentScale(d.kind,d.scale*pop);
       if(d.kind==='grass'&&gi<ECOLOGY.maxDecorTotal){
         frameAt(gx,gy);
-        surfMatrix(_M,_R,d.yaw||0,0.11*d.scale*pop,0.14*d.scale*pop,0.11*d.scale*pop,1+lf+0.008);
+        surfMatrix(_M,_R,d.yaw||0,sc.sx,sc.sy,sc.sz,1+lf+sc.lift);
         ecoGrass.setMatrixAt(gi++,_M);
       }else if(d.kind==='flower'&&fi<ECOLOGY.maxDecorTotal){
         frameAt(gx,gy);
-        surfMatrix(_M,_R,0,0.08*d.scale*pop,0.08*d.scale*pop,0.08*d.scale*pop,1+lf+0.012);
+        surfMatrix(_M,_R,0,sc.sx,sc.sy,sc.sz,1+lf+sc.lift);
         ecoFlower.setMatrixAt(fi++,_M);
       }else if(d.kind==='tree'&&ti<ECOLOGY.maxDecorTotal){
         frameAt(gx,gy);
-        surfMatrix(_M,_R,d.yaw,0.14*d.scale*pop,0.24*d.scale*pop,0.14*d.scale*pop,1+lf+0.01);
+        surfMatrix(_M,_R,d.yaw,sc.trunk.sx,sc.trunk.sy,sc.trunk.sz,1+lf+sc.trunk.lift);
         ecoTreeTrunk.setMatrixAt(ti++,_M);
-        surfMatrix(_M,_R,d.yaw,0.34*d.scale*pop,0.36*d.scale*pop,0.34*d.scale*pop,1+lf+0.22*d.scale*pop);
+        surfMatrix(_M,_R,d.yaw,sc.top.sx,sc.top.sy,sc.top.sz,1+lf+sc.top.sy*pop+sc.top.lift);
         ecoTreeTop.setMatrixAt(ttop++,_M);
       }
     }

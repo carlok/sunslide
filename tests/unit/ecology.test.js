@@ -1,9 +1,14 @@
 import { describe, expect, it } from 'vitest';
+import { CW, CH } from '../../src/logic/constants.js';
 import {
   ECOLOGY,
+  CELL_TANGENT,
+  DECOR_LIMITS,
+  cellFootprintTangent,
   cellKey,
   clearEcology,
   createEcologyState,
+  decorInsideCell,
   ecologyCount,
   markBubbleCollected,
   planCellDecor,
@@ -38,5 +43,28 @@ describe('ecology', () => {
   it('cell keys are unique per tile coordinate', () => {
     expect(cellKey(1, 2, 3)).not.toBe(cellKey(2, 2, 3));
     expect(cellKey(1, 2, 3)).not.toBe(cellKey(1, 3, 3));
+  });
+
+  it('patch footprint matches one maze cell in tangent units', () => {
+    const fp = cellFootprintTangent();
+    expect(fp.sx).toBeCloseTo(CW * 0.94, 6);
+    expect(fp.sz).toBeCloseTo(CH * 0.94, 6);
+    expect(fp.sx).toBeLessThan(CW * 1.02);
+    expect(fp.sz).toBeLessThan(CH * 1.02);
+    expect(CELL_TANGENT.sx).toBeCloseTo(fp.sx);
+    expect(fp.thick).toBeLessThan(0.01);
+  });
+
+  it('planned decor stays inside the cell with low height', () => {
+    for (let t = 0; t < 8; t++) {
+      for (let x = 0; x < 8; x++) {
+        for (let y = 0; y < 4; y++) {
+          for (const d of planCellDecor(t, x, y)) {
+            expect(decorInsideCell(d)).toBe(true);
+          }
+        }
+      }
+    }
+    expect(DECOR_LIMITS.maxHeight).toBeLessThanOrEqual(0.04);
   });
 });

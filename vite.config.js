@@ -30,7 +30,19 @@ import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
-import { createEcologyState, clearEcology, markBubbleCollected, ecologyCount, ECOLOGY } from './src/logic/ecology.js';
+import {
+  createEcologyState,
+  clearEcology,
+  markBubbleCollected,
+  ecologyCount,
+  ECOLOGY,
+  CELL_TANGENT,
+  PATCH_THICK,
+  PATCH_LIFT,
+  decorLocalOffset,
+  decorTangentScale,
+  cellFootprintTangent,
+} from './src/logic/ecology.js';
 
 window.__ssBoot = true;
 
@@ -70,6 +82,7 @@ export function startSunslide() {
     get zoom() { return [zoomT, zoomTarget, viewFar]; },
     setQuality(l) { qMode = l; qLevel = l === 'auto' ? 2 : l; applyQuality(); },
     get greenedCount() { return ecologyCount(ecologyState); },
+    getEcologyLayout() { return cellFootprintTangent(); },
     popBubbleAt(t, x, y) {
       const T = tiles[t];
       if (!T) return ecologyCount(ecologyState);

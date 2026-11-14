@@ -1,0 +1,71 @@
+function setPaused(p){
+  if(p&&state!=='play'&&state!=='dying'&&state!=='warp') return;
+  paused=p; renderedPaused=false; $('pause').classList.toggle('hide',!p); syncButtons();
+  if(AUD.ac){ try{ p?AUD.ac.suspend():AUD.ac.resume(); }catch(e){} }
+}
+function setView(far){ viewFar=far; store.set('viewFar',far); syncButtons(); }
+function setMuted(m){ AU.muted=m; store.set('muted',m); if(AUD.ac) AUD.sfx.gain.value=m?0:1; syncButtons(); }
+function setMusic(on){ MUS.on=on; store.set('music',on); audio(); if(AUD.ac){ AUD.mus.gain.value=on?0.6:0; MUS.next=0; } syncButtons(); }
+function syncButtons(){
+  $('bMus').textContent=MUS.on?'♪':'×'; $('sBtn').textContent='Sound: '+(AU.muted?'Off':'On'); $('mBtn').textContent='Music: '+(MUS.on?'On':'Off');
+  $('vBtn').textContent='View: '+(viewFar?'Planet':'Close'); $('bView').classList.toggle('on',viewFar); $('bView2').textContent=viewFar?'◉':'◎';
+  $('qBtn').textContent='Quality: '+(qMode==='auto'?'Auto ('+QUAL[qLevel].n+')':QUAL[qLevel].n);
+}
+const KEYS={ArrowUp:0,KeyW:0,ArrowRight:1,KeyD:1,ArrowDown:2,KeyS:2,ArrowLeft:3,KeyA:3};
+addEventListener('keydown',e=>{
+  if(KEYS[e.code]!==undefined){ e.preventDefault(); if(state==='title'){ startGame(); return; } if(!paused) want=KEYS[e.code]; return; }
+  if(e.code==='Space'){ e.preventDefault(); setView(!viewFar); }
+  else if(e.code==='KeyP'||e.code==='Escape'){ setPaused(!paused); }
+  else if(e.code==='KeyM'){ setMusic(!MUS.on); }
+  else if(e.code==='Enter'&&(state==='title'||state==='over')) startGame();
+});
+document.querySelectorAll('#pad button[data-d]').forEach(b=>b.addEventListener('pointerdown',e=>{ e.preventDefault(); if(!paused) want=+b.dataset.d; }));
+$('bView').addEventListener('pointerdown',e=>{ e.preventDefault(); setView(!viewFar); });
+$('bView2').addEventListener('click',()=>setView(!viewFar));
+let sx0=0,sy0=0,sid=-1;
+stageEl.addEventListener('pointerdown',e=>{ if(e.target.closest('.panel,#tb')) return; sx0=e.clientX; sy0=e.clientY; sid=e.pointerId; });
+function endPtr(e,cancel){
+  if(e.pointerId!==sid) return; sid=-1; if(cancel||paused) return;
+  const dx=e.clientX-sx0, dy=e.clientY-sy0;
+  if(Math.hypot(dx,dy)>24){ want=Math.abs(dx)>Math.abs(dy)?(dx>0?1:3):(dy>0?2:0); return; }
+  tapAt(e);
+}
+stageEl.addEventListener('pointerup',e=>endPtr(e,false));
+stageEl.addEventListener('pointercancel',e=>endPtr(e,true));
+stageEl.addEventListener('wheel',e=>{ e.preventDefault(); if(Math.abs(e.deltaY)>4) setView(e.deltaY>0); },{passive:false});
+const ray=new THREE.Raycaster();
+function tapAt(e){
+  if(state!=='play') return;
+  const rc=stageEl.getBoundingClientRect();
+  ray.setFromCamera({x:((e.clientX-rc.left)/rc.width)*2-1,y:-(((e.clientY-rc.top)/rc.height)*2-1)},camera);
+  const o=ray.ray.origin, d=ray.ray.direction, b=o.dot(d), c=o.dot(o)-1, disc=b*b-c; if(disc<0) return;
+  const t=-b-Math.sqrt(disc), px=o.x+d.x*t, py=o.y+d.y*t, pz=o.z+d.z*t;
+  const gy=(LATR-Math.asin(clamp(py,-1,1)))/CH, gx=mod(Math.atan2(px,pz)/CW,GW);
+  if(gy<0||gy>=GH) return;
+  const msg=trySlide(Math.floor(gx/TW),Math.floor(gy/TH)); if(msg){ say(msg,1200); SFX.nope(); }
+}
+mapC.addEventListener('pointerdown',e=>{
+  e.preventDefault(); if(state!=='play'||paused||!mapG) return;
+  const rc=mapC.getBoundingClientRect(), x=(e.clientX-rc.left)*mapC.width/rc.width, y=(e.clientY-rc.top)*mapC.height/rc.height;
+  const c=Math.floor((x-mapG.pad)/mapG.cw), r=Math.floor((y-mapG.top)/mapG.ch);
+  if(c<0||c>=COLS||r<0||r>=ROWS) return;
+  const id=slotGrid[r][c]; if(id<0) return;
+  if(holeNeighbors().some(n=>n.c===c&&n.r===r)){ const msg=trySlide(c,r); if(msg){ say(msg,1200); SFX.nope(); } return; }
+  const T=tiles[id];
+  if(waypoint===id){ waypoint=-1; say('Waypoint cleared',800); SFX.tick(); return; }
+  if(T.cleared){ say('Island '+T.num+' is already in bloom',1000); return; }
+  if(player.t===id){ say('You are on island '+T.num,900); return; }
+  waypoint=id; say('Waypoint: island '+T.num+' — follow the pink arrow',1500); SFX.tick();
+});
+$('go').addEventListener('click',startGame);
+$('again').addEventListener('click',()=>{ $('oBlock').classList.add('hide'); $('tBlock').classList.remove('hide'); startGame(); });
+$('bPause').addEventListener('click',()=>setPaused(!paused));
+$('bMus').addEventListener('click',()=>setMusic(!MUS.on));
+$('mBtn').addEventListener('click',()=>setMusic(!MUS.on));
+document.addEventListener('pointerdown',()=>{ if(audio()&&AUD.ac.state==='suspended'&&!paused) AUD.ac.resume(); });
+$('resume').addEventListener('click',()=>setPaused(false));
+$('sBtn').addEventListener('click',()=>setMuted(!AU.muted));
+$('vBtn').addEventListener('click',()=>setView(!viewFar));
+$('restart').addEventListener('click',()=>{ setPaused(false); startGame(); });
+$('qBtn').addEventListener('click',()=>{ const order=['auto',2,1,0]; qMode=order[(order.indexOf(qMode)+1)%order.length]; store.set('quality',qMode); qLevel=qMode==='auto'?2:qMode; perfStart=performance.now(); applyQuality(); });
+document.addEventListener('visibilitychange',()=>{ if(document.hidden&&(state==='play'||state==='warp')) setPaused(true); });

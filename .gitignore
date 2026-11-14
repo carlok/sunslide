@@ -1,0 +1,10 @@
+node_modules/
+dist/
+coverage/
+tests/out/
+audit/
+.lighthouseci/
+.lighthouseci-desktop/
+.DS_Store
+*.log
+extracted/

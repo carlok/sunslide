@@ -42,6 +42,7 @@ describe('movement graph', () => {
   });
 
   it('nbrLocal stays on one island', () => {
+    tiles[0].walls = new Uint8Array(N);
     const n = graph.nbrLocal(0, 1, 1, 1);
     expect(n).toEqual({ t: 0, x: 2, y: 1 });
   });

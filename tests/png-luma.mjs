@@ -70,7 +70,7 @@ function decodePngRgba(buf) {
 }
 
 /** Sample center play area; fail if avg luma too low or too many near-black pixels. */
-export function analyzeStagePng(buf, { blackLuma = 8, maxBlackFrac = 0.88, minMeanLuma = 22 } = {}) {
+export function analyzeStagePng(buf, { blackLuma = 8, minMeanLuma = 22 } = {}) {
   const { width: w, height: h, data } = decodePngRgba(buf);
   let sum = 0;
   let n = 0;

@@ -184,9 +184,28 @@ try {
     if (!layout.mapVisible) fail(`${name}: map not visible`);
     if (layout.overflowX || layout.overflowY) fail(`${name}: page overflows the viewport`);
 
-    await page.waitForTimeout(400);
+    await page.evaluate(() => {
+      const b = document.getElementById('bPause');
+      if (b && !b.classList.contains('on')) b.click();
+    });
+    await page.waitForTimeout(300);
     const stageShot = path.join(out, `${name}-stage.png`);
-    await page.locator('#stage').screenshot({ path: stageShot, timeout: 30_000 });
+    const stageBox = await page.locator('#stage').boundingBox();
+    if (!stageBox) fail(`${name}: #stage not found for screenshot`);
+  else {
+      const clip = {
+        x: stageBox.x,
+        y: stageBox.y,
+        width: stageBox.width,
+        height: stageBox.height,
+      };
+      await page.screenshot({
+        path: stageShot,
+        clip,
+        animations: 'disabled',
+        timeout: 60_000,
+      });
+    }
     await page.screenshot({ path: path.join(out, `${name}.png`), timeout: 30_000 });
     const luma = analyzeStagePng(readFileSync(stageShot));
     console.log(name, 'render-luma', luma);

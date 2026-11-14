@@ -173,4 +173,8 @@ function syncScene(time,dt){
   pMat.uniforms.uPx.value=ffMat.uniforms.uPx.value=glc.height/(2*Math.tan(camera.fov*DEG/2));
 }
 let useBloom=true;
-function render(){ if(useBloom) composer.render(); else renderer.render(scene,camera); }
+function render(){
+  if(useBloom&&composer) composer.render();
+  else if(useBloom&&!composer) { ensurePostPipeline(); renderer.render(scene,camera); }
+  else renderer.render(scene,camera);
+}

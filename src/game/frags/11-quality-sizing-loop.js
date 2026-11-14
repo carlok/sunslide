@@ -4,6 +4,7 @@ let qLevel=qMode==='auto'?2:qMode, pixelRatio=1, perfStart=performance.now(), pe
 function applyQuality(){
   const q=QUAL[qLevel];
   useBloom=q.bloom;
+  if(useBloom) schedulePostPipelineLoad();
   sunL.castShadow=q.shadow>0;
   if(q.shadow&&sunL.shadow.mapSize.x!==q.shadow){ sunL.shadow.mapSize.set(q.shadow,q.shadow); if(sunL.shadow.map){ sunL.shadow.map.dispose(); sunL.shadow.map=null; } }
   blades.geometry.instanceCount=q.blades; flowers.count=q.flowers; ffPts.geometry.setDrawRange(0,q.ff);
@@ -19,7 +20,7 @@ function resize(){
   const minPr=useBloom?(area>1.2e6?0.85:0.75):0.6;
   pixelRatio=Math.max(minPr,Math.min(window.devicePixelRatio||1,q.dpr,budgetPr));
   renderer.setPixelRatio(pixelRatio); renderer.setSize(w,h,false);
-  composer.setPixelRatio(pixelRatio); composer.setSize(w,h);
+  if(composer){ composer.setPixelRatio(pixelRatio); composer.setSize(w,h); }
   camera.aspect=w/h; camera.updateProjectionMatrix();
   fxDpr=Math.min(2,window.devicePixelRatio||1); fxc.width=Math.round(w*fxDpr); fxc.height=Math.round(h*fxDpr);
   mapDpr=Math.min(2,window.devicePixelRatio||1); mapC.width=Math.round(mapC.clientWidth*mapDpr); mapC.height=Math.round(mapC.clientHeight*mapDpr);

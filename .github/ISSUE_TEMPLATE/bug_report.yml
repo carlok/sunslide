@@ -1,0 +1,40 @@
+name: Bug report
+description: Report incorrect game behavior, broken builds, or test failures
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Security vulnerabilities:** do not use this form. Report privately at
+        https://github.com/carlok/sunslide/security/advisories/new
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: What did you expect vs what you saw?
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. npm ci && npm run build
+        2. npm test
+        3. ...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Commit or version
+      placeholder: branch name or git SHA
+  - type: dropdown
+    id: platform
+    attributes:
+      label: Platform
+      options:
+        - Desktop browser
+        - Mobile browser
+        - CI / headless
+        - Other

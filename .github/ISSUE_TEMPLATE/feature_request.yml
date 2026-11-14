@@ -1,0 +1,28 @@
+name: Feature request
+description: Suggest gameplay, UX, or developer-experience improvements
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        For **security** issues, use private reporting:
+        https://github.com/carlok/sunslide/security/advisories/new
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem or opportunity
+      description: What player or contributor pain does this address?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+    validations:
+      required: false

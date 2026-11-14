@@ -5,8 +5,9 @@
 **[Play live](https://carlok.github.io/sunslide/)** · Pac-Man-style bubble chasing on a **15-puzzle of sliding meadow islands** wrapped around a tiny planet, with day/night, bats, sinkholes, and Pip the bubble frog.
 
 [![CI](https://github.com/carlok/sunslide/actions/workflows/ci.yml/badge.svg)](https://github.com/carlok/sunslide/actions/workflows/ci.yml)
-[![Pages](https://github.com/carlok/sunslide/actions/workflows/pages.yml/badge.svg)](https://github.com/carlok/sunslide/actions/workflows/pages.yml)
-[![codecov](https://codecov.io/gh/carlok/sunslide/graph/badge.svg)](https://codecov.io/gh/carlok/sunslide)
+[![License](https://img.shields.io/github/license/carlok/sunslide)](https://github.com/carlok/sunslide/blob/main/LICENSE)
+
+Contributing: [CONTRIBUTING.md](CONTRIBUTING.md) · Security: [SECURITY.md](SECURITY.md) · Conduct: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
 
 ## Controls
 
@@ -59,4 +60,4 @@ Pushes to `main` also deploy `dist/` to GitHub Pages at `/sunslide/`.
 
 ## Licence
 
-Game source is authored for this repository. **three.js** is [MIT](https://github.com/mrdoob/three.js/blob/dev/LICENSE). No separate licence file was included with the original single-file drop; add one in-repo if you need explicit terms.
+Sunslide source is licensed under **Apache-2.0** ([LICENSE](LICENSE)). **three.js** is [MIT](https://github.com/mrdoob/three.js/blob/dev/LICENSE) via npm.

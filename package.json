@@ -17,7 +17,7 @@
     "lhci": "lhci autorun && lhci autorun --config=lighthouserc-desktop.cjs"
   },
   "dependencies": {
-    "three": "0.160.0"
+    "three": "0.160.1"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.14.0",

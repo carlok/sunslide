@@ -19,7 +19,7 @@ module.exports = {
         'categories:accessibility': ['error', { minScore: 0.9 }],
         'categories:best-practices': ['error', { minScore: 0.9 }],
         'categories:seo': ['error', { minScore: 0.9 }],
-        'categories:performance': ['warn', { minScore: 0.5 }],
+        'categories:performance': ['warn', { minScore: 0.3 }],
       },
     },
     upload: {

@@ -22,21 +22,17 @@ jobs:
       - run: npx playwright install chromium --with-deps
       - run: npm run lint
       - run: npm run build
-<<<<<<< HEAD
       - run: npm run test:unit
       - name: Smoke test
         env:
           SMOKE_TIMEOUT_MS: 420000
         run: npm run test:smoke
-=======
-      - run: npm test
       - name: Upload coverage report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: coverage
           path: coverage/
->>>>>>> 76e8395 (Normalize community files, Apache-2.0, and governance templates)
       - name: Upload smoke screenshots
         if: always()
         uses: actions/upload-artifact@v4

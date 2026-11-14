@@ -66,6 +66,17 @@ export function startSunslide() {
     set sunLon(v) { sunLon = v; },
     get zoom() { return [zoomT, zoomTarget, viewFar]; },
     setQuality(l) { qMode = l; qLevel = l === 'auto' ? 2 : l; applyQuality(); },
+    getRenderMetrics() {
+      return {
+        qLevel,
+        qMode,
+        useBloom,
+        pixelRatio,
+        stageCss: [stageEl.clientWidth, stageEl.clientHeight],
+        canvasBuffer: [glc.width, glc.height],
+        composerRT: [composer.renderTarget1.width, composer.renderTarget1.height],
+      };
+    },
     setView,
     get slotGrid() { return slotGrid; },
     holeNeighbors,

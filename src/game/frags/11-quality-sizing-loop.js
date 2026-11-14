@@ -15,7 +15,9 @@ function perfSample(ms){
 }
 function resize(){
   const w=Math.max(1,stageEl.clientWidth), h=Math.max(1,stageEl.clientHeight), q=QUAL[qLevel];
-  pixelRatio=Math.max(0.6,Math.min(window.devicePixelRatio||1,q.dpr,Math.sqrt(q.px/(w*h))));
+  const area=w*h, budgetPr=Math.sqrt(q.px/area);
+  const minPr=useBloom?(area>1.2e6?0.85:0.75):0.6;
+  pixelRatio=Math.max(minPr,Math.min(window.devicePixelRatio||1,q.dpr,budgetPr));
   renderer.setPixelRatio(pixelRatio); renderer.setSize(w,h,false);
   composer.setPixelRatio(pixelRatio); composer.setSize(w,h);
   camera.aspect=w/h; camera.updateProjectionMatrix();

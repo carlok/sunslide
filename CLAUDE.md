@@ -45,3 +45,5 @@ If you still have a monolithic `index.html`, run `node scripts/split-frags.mjs` 
 ## Known follow-ups
 
 See `docs/GAME_DESIGN.md` and the original issue list: real-device WebGL, gamepad on hardware, optional further ES-module extraction of render frags into `src/render/*`.
+
+**Large desktop rendering:** Do not use a multisampled (`samples > 0`) `WebGLRenderTarget` as `EffectComposer`'s ping-pong buffer—many GPUs fail MSAA resolve at large sizes and show black macro-tiles through bloom. Renderer `antialias` is enough. Keep a higher minimum `pixelRatio` when bloom is on and the stage is large so bloom does not amplify low-res blocks.

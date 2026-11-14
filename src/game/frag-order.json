@@ -1,0 +1,13 @@
+[
+  "01-config-helpers.js",
+  "02-audio-synth-sfx-procedural-music-no-assets.js",
+  "03-game-state.js",
+  "04-rules.js",
+  "05-renderer.js",
+  "06-scene-sync-state-visuals.js",
+  "07-2d-overlay-floating-text-off-screen-arrows-last-.js",
+  "08-minimap-4x4-puzzle-overview-tap-to-slide.js",
+  "09-hud-hints-toast.js",
+  "10-input.js",
+  "11-quality-sizing-loop.js"
+]

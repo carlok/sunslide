@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#04050d">
+<meta property="og:image" content="https://carlok.github.io/sunslide/assets/hero.png">
+<title>Sunslide</title>
+<link rel="stylesheet" href="/src/styles.css">
+</head>
+<body>
+
+<div id="app">
+  <div id="hud">
+    <div><small>Score</small><span id="score">0</span></div>
+    <div class="c"><small>Sector</small><span id="level">1</span></div>
+    <div class="c"><small>Bubbles</small><span id="left">0</span></div>
+    <div class="c"><small>Home</small><span id="home">0/15</span></div>
+    <div class="r"><small>Lives</small><span id="lives"></span></div>
+  </div>
+  <div id="stage">
+    <canvas id="gl"></canvas>
+    <canvas id="fx"></canvas>
+    <div id="toast"></div>
+    <div id="tb"><button id="bView2" aria-label="Toggle view">◎</button><button id="bPause" aria-label="Pause">❚❚</button><button id="bMus" aria-label="Music">♪</button></div>
+    <div id="ov" class="panel">
+      <div id="tBlock">
+        <h1>SUNSLIDE</h1>
+        <p>Pip the bubble frog lives on a tiny planet made of 15 sliding meadow islands.</p>
+        <ul>
+          <li><b>Swipe</b>, use the arrows or the pad to hop. Pop bubbles in a row for <b>combos</b>.</li>
+          <li><b>Tap an island</b> next to the empty meadow, on the planet or on the map, to slide it. Only sunlit islands move.</li>
+          <li>Tap any other island on the <b>map</b> to set a waypoint. The map shows every bubble left.</li>
+          <li>Each <b>bat</b> guards its own island: quick in the dark, drowsy in daylight.</li>
+          <li>Slide an island to its <b>home slot</b> (1–15 in reading order): its bat sleeps and its bubbles score double.</li>
+          <li>Clear an island and it <b>blooms</b>: flowers, trees and a beehive grow, and its bat flies away for good.</li>
+          <li>Watch for cracks: a <b>sinkhole</b> drops you straight through to the other side of the planet.</li>
+          <li><b>Sky berries</b> give a speed burst. <b>Sunstones</b> let you chase the bats.</li>
+        </ul>
+        <button class="big" id="go">PLAY</button>
+        <p class="keys" id="bestline"></p>
+        <p class="keys">Keys: arrows/WASD · Space view · P pause · M music · gamepads supported</p>
+      </div>
+      <div id="oBlock" class="hide">
+        <h1>LIGHTS OUT</h1>
+        <p id="res"></p>
+        <button class="big" id="again">AGAIN</button>
+      </div>
+    </div>
+    <div id="pause" class="panel hide">
+      <h1>PAUSED</h1>
+      <div class="row"><button class="big" id="resume">RESUME</button></div>
+      <div class="row"><button class="sm" id="qBtn">Quality</button><button class="sm" id="vBtn">View</button><button class="sm" id="sBtn">Sound</button><button class="sm" id="mBtn">Music</button></div>
+      <div class="row"><button class="sm" id="restart">Restart</button></div>
+    </div>
+  </div>
+  <div id="status"><span id="chip">DAY</span><span id="hint"></span></div>
+  <div id="bottom">
+    <div id="mapbox"><canvas id="map"></canvas><div id="mapcap">Map · tap: slide / waypoint</div></div>
+    <div id="keyshelp"><b>Arrows / WASD</b> hop · <b>Space</b> or <b>wheel</b> planet view · <b>P</b> pause · <b>M</b> music<br><b>Click the map</b> to slide an island or set a waypoint<br><b>Gamepad</b>: stick/D-pad hop · <b>LB/RB</b> pick island · <b>A</b> slide · <b>X/Y</b> view · <b>Start</b> pause · <b>Select</b> music</div>
+    <div id="pad">
+      <button class="u" data-d="0" aria-label="Up">▲</button>
+      <button class="l" data-d="3" aria-label="Left">◀</button>
+      <button class="m" id="bView" aria-label="Toggle view">VIEW</button>
+      <button class="rt" data-d="1" aria-label="Right">▶</button>
+      <button class="d" data-d="2" aria-label="Down">▼</button>
+    </div>
+  </div>
+</div>
+
+<script>
+window.__ssFail=function(msg){var o=document.getElementById('ov');if(o){o.classList.remove('hide');o.innerHTML='<h1>SUNSLIDE</h1><p>'+msg+'</p>';}};
+setTimeout(function(){ if(!window.__ssBoot) window.__ssFail('The game bundle did not load. Try a hard refresh or run npm run build.'); },15000);
+
+</script>
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>

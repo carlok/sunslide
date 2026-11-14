@@ -13,6 +13,42 @@ function syncTiles(time){
     else T.mFloor.emissiveIntensity=0;
   }
 }
+function syncEcology(){
+  if(!ecologyState) return;
+  let pi=0, gi=0, fi=0, ti=0, ttop=0;
+  const growT=ECOLOGY.growSeconds;
+  for(const cell of ecologyState.byCell.values()){
+    const T=tiles[cell.tileId]; if(!T) continue;
+    const p=tilePos(T), lf=liftOf(T), g=smooth(clamp((gameClock-cell.growAt)/growT,0,1)), pop=0.1+0.9*g;
+    frameAt(p.x+cell.x+0.5,p.y+cell.y+0.5);
+    surfMatrix(_M,_R,0,0.9*pop,0.022*pop,0.9*pop,1+lf+0.004);
+    ecoPatches.setMatrixAt(pi++,_M);
+    for(const d of cell.decor){
+      const gx=p.x+cell.x+0.5+(d.lx-0.5)*0.82, gy=p.y+cell.y+0.5+(d.ly-0.5)*0.82;
+      if(d.kind==='grass'&&gi<ECOLOGY.maxDecorTotal){
+        frameAt(gx,gy);
+        surfMatrix(_M,_R,d.yaw||0,0.11*d.scale*pop,0.14*d.scale*pop,0.11*d.scale*pop,1+lf+0.008);
+        ecoGrass.setMatrixAt(gi++,_M);
+      }else if(d.kind==='flower'&&fi<ECOLOGY.maxDecorTotal){
+        frameAt(gx,gy);
+        surfMatrix(_M,_R,0,0.08*d.scale*pop,0.08*d.scale*pop,0.08*d.scale*pop,1+lf+0.012);
+        ecoFlower.setMatrixAt(fi++,_M);
+      }else if(d.kind==='tree'&&ti<ECOLOGY.maxDecorTotal){
+        frameAt(gx,gy);
+        surfMatrix(_M,_R,d.yaw,0.14*d.scale*pop,0.24*d.scale*pop,0.14*d.scale*pop,1+lf+0.01);
+        ecoTreeTrunk.setMatrixAt(ti++,_M);
+        surfMatrix(_M,_R,d.yaw,0.34*d.scale*pop,0.36*d.scale*pop,0.34*d.scale*pop,1+lf+0.22*d.scale*pop);
+        ecoTreeTop.setMatrixAt(ttop++,_M);
+      }
+    }
+  }
+  ecoPatches.count=pi; ecoGrass.count=gi; ecoFlower.count=fi; ecoTreeTrunk.count=ti; ecoTreeTop.count=ttop;
+  ecoPatches.instanceMatrix.needsUpdate=pi>0;
+  ecoGrass.instanceMatrix.needsUpdate=gi>0;
+  ecoFlower.instanceMatrix.needsUpdate=fi>0;
+  ecoTreeTrunk.instanceMatrix.needsUpdate=ti>0;
+  ecoTreeTop.instanceMatrix.needsUpdate=ttop>0;
+}
 function syncBubbles(time){
   let nb=0, ng=0;
   for(const T of tiles){
@@ -123,7 +159,7 @@ function placeCamera(){
 }
 function syncScene(time,dt){
   U.time.value=time;
-  syncSky(); syncTiles(time); syncBubbles(time); syncBloom(); syncFrog(time,dt); syncBats(time,dt);
+  syncSky(); syncTiles(time); syncBubbles(time); syncEcology(); syncBloom(); syncFrog(time,dt); syncBats(time,dt);
   syncSinks(time,dt); syncOrchard(time); syncClouds(time); syncButterflies(time); syncFlags(time); syncPillars(); syncBerry(time); syncMeteors(dt);
   if(boostT>0&&!paused&&player.moving&&Math.random()<0.6) emit(frog.root.position,1,PC.teal,0.05,0.008,0.5,0.05,0.3);
   if(!paused) updateParticles(dt);

@@ -169,6 +169,26 @@ try {
     if (res.dotsLeft !== res.counted || res.leftSum !== res.counted)
       fail(`${name}: bubble counters out of sync`);
 
+    const eco = await page.evaluate(() => {
+      const S = window.__sunslide;
+      let cell = null;
+      for (const T of S.tiles) {
+        for (let i = 0; i < 32; i++) {
+          if (T.dots[i] === 1) {
+            cell = { t: T.id, x: i % 8, y: (i / 8) | 0 };
+            break;
+          }
+        }
+        if (cell) break;
+      }
+      const before = S.greenedCount;
+      if (cell) S.popBubbleAt(cell.t, cell.x, cell.y);
+      for (let i = 0; i < 40; i++) S.update(1 / 60);
+      return { before, after: S.greenedCount, cell };
+    });
+    if (!eco.cell) fail(`${name}: no bubble cell for ecology check`);
+    if (eco.after <= eco.before) fail(`${name}: pop should green a tile (${eco.before}→${eco.after})`);
+
     const layout = await page.evaluate(() => {
       const r = (id) => document.getElementById(id).getBoundingClientRect();
       const s = r('stage'),

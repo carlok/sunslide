@@ -1,5 +1,6 @@
 function slotDist(a,b){ const dc=Math.abs(a.c-b.c); return Math.min(dc,COLS-dc)+Math.abs(a.r-b.r); }
 function newLevel(){
+  if(!ecologyState) ecologyState=createEcologyState(); else clearEcology(ecologyState);
   for(const T of tiles) disposeTileRender(T);
   tiles=[]; for(let i=0;i<NT;i++) tiles.push(makeTile(i));
   slotGrid=[...Array(ROWS)].map(()=>Array(COLS).fill(-1));
@@ -51,6 +52,7 @@ function eatAt(t,x,y){
   T.dots[i]=0; dotsLeft--; T.left--;
   const mult=isHome(T)?2:1, pos=cellWorld(t,x,y,0.035);
   if(v===1){
+    markBubbleCollected(ecologyState,t,x,y,gameClock);
     combo=comboT<CFG.comboWin?combo+1:1; comboT=0;
     addScore((10+Math.min(20,(combo-1)*2))*mult); SFX.pop(combo-1); emit(pos,10,PC.bubble,0.2,0.007,0.45,0.25);
     if(combo>=5&&combo%5===0){ floatAt(pos,'combo ×'+combo,'#7fe8ff'); if(combo%20===0) say('Combo ×'+combo+'!',900); }

@@ -27,7 +27,15 @@ function resize(){
 }
 new ResizeObserver(()=>resize()).observe(stageEl);
 new ResizeObserver(()=>resize()).observe(mapC);
-let lastT=0;
+let lastT=0, renderLoopActive=false, pendingClockAlign=false;
+function wakeRenderLoop(){
+  if(renderLoopActive) return;
+  renderLoopActive=true;
+  requestAnimationFrame(frame);
+}
+function onDocumentVisible(){ pendingClockAlign=true; }
+addEventListener('pointerdown',()=>wakeRenderLoop(),{passive:true});
+addEventListener('keydown',()=>wakeRenderLoop());
 /* ---------- gamepad (standard mapping) ---------- */
 const PAD={idx:-1,prev:[],sel:-1};
 addEventListener('gamepadconnected',e=>{ PAD.idx=e.gamepad.index; PAD.sel=-1; say('Gamepad connected — stick to hop, LB/RB + A to slide',2200); });
@@ -75,12 +83,25 @@ function pollPad(){
   PAD.prev=gp.buttons.map(x=>x.pressed);
 }
 function frame(ts){
-  requestAnimationFrame(frame);
-  const now=ts/1000, dt=Math.min(0.05,Math.max(0.0001,(now-lastT)||0.016)); lastT=now;
+  const plan=planRenderLoopFrame({
+    documentHidden:document.hidden,
+    gameState:state,
+    paused,
+    tilesAnimating:tiles.some(t=>t.anim),
+    renderedPaused,
+  });
+  if(plan.continueLoop){ requestAnimationFrame(frame); renderLoopActive=true; }
+  else renderLoopActive=false;
+
+  if(pendingClockAlign){ lastT=resumeClockAfterHidden(ts/1000); pendingClockAlign=false; }
+  const now=ts/1000;
+  const dt=plan.advanceClock?Math.min(0.05,Math.max(0.0001,(now-lastT)||0.016)):0;
+  if(plan.advanceClock) lastT=now;
+
   perfSample(dt*1000);
   pollPad();
-  if(!paused) update(dt);
-  if(paused&&renderedPaused) return;
+  if(plan.simulate&&!paused) update(dt);
+  if(!plan.render) return;
   syncScene(now,dt); render(); drawFx(now,dt); drawMap(now); hud();
   renderedPaused=paused;
 }

@@ -43,6 +43,10 @@ import {
   decorTangentScale,
   cellFootprintTangent,
 } from './src/logic/ecology.js';
+import {
+  planRenderLoopFrame,
+  resumeClockAfterHidden,
+} from './src/logic/render-loop-policy.js';
 
 window.__ssBoot = true;
 
@@ -108,7 +112,7 @@ export function startSunslide() {
     lightSlot,
     renderInfo() { return renderer.info; },
   };
-  requestAnimationFrame(frame);
+  wakeRenderLoop();
 }
 `;
     },

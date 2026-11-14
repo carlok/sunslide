@@ -122,6 +122,11 @@ try {
     });
     await ctx.addInitScript(() => {
       window.__ssSmokeNoFullscreen = true;
+      try {
+        localStorage.setItem('sunslide.tutorialSeen', JSON.stringify(true));
+      } catch {
+        /* private mode */
+      }
     });
     const page = await ctx.newPage();
     page.setDefaultTimeout(60_000);

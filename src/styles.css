@@ -22,6 +22,11 @@ a{color:var(--teal)}
 #tb button{width:36px;height:32px;border-radius:10px;border:1px solid var(--line);background:rgba(12,17,48,.7);font-size:13px}
 #overlay{position:absolute;right:calc(8px + env(safe-area-inset-right));bottom:calc(8px + env(safe-area-inset-bottom));z-index:5;max-width:min(320px,46vw);display:flex;flex-direction:column;gap:6px;padding:10px 12px;border-radius:14px;border:1px solid rgba(40,49,106,.55);background:rgba(4,5,13,.42);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);text-shadow:0 1px 8px rgba(0,0,0,.85);pointer-events:none}
 #overlay > *{pointer-events:auto}
+/* Title / pause modals sit above the HUD; never let the dock steal taps on PLAY. */
+#stage:has(#ov:not(.hide)) #overlay,
+#stage:has(#ov:not(.hide)) #overlay > *,
+#stage:has(#pause:not(.hide)) #overlay,
+#stage:has(#pause:not(.hide)) #overlay > *{pointer-events:none!important}
 #hud{display:grid;grid-template-columns:1.25fr .8fr 1fr .9fr 1fr;gap:4px;padding:0;font-variant-numeric:tabular-nums;font-weight:700;font-size:14px;margin:0}
 #hud small{display:block;font-size:9px;font-weight:600;color:var(--dim);letter-spacing:.12em;text-transform:uppercase}
 #hud .c{text-align:center}#hud .r{text-align:right}

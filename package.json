@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "3D sliding-island arcade puzzle on a tiny planet (three.js, Vite).",
+  "description": "15-puzzle sliding meadow islands on a tiny planet — bubble arcade (three.js, Vite).",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

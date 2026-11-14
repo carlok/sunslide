@@ -60,7 +60,7 @@ Pushes to `main` also deploy `dist/` to GitHub Pages at `/sunslide/`.
 
 ## Credits
 
-**Sunslide** — hop as Pip the bubble frog on a tiny planet of fifteen meadow islands in a sunlit 15-puzzle. © [carlok](https://github.com/carlok). Source: [Apache-2.0](LICENSE). Built with [three.js](https://threejs.org/) (MIT) and Vite.
+**Sunslide** — hop as Pip the bubble frog on a tiny planet: a sunlit **15-puzzle of sliding meadow islands**. © [carlok](https://github.com/carlok). Source: [Apache-2.0](LICENSE). Built with [three.js](https://threejs.org/) (MIT) and Vite.
 
 ## Licence
 

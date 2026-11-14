@@ -120,6 +120,9 @@ try {
       viewport: { width: opts.width, height: opts.height },
       ...opts,
     });
+    await ctx.addInitScript(() => {
+      window.__ssSmokeNoFullscreen = true;
+    });
     const page = await ctx.newPage();
     page.setDefaultTimeout(60_000);
     page.setDefaultNavigationTimeout(60_000);
@@ -155,6 +158,12 @@ try {
       return { ok: open && closed && open2 && outside, open, closed, open2, outside };
     });
     if (!menu.ok) fail(`${name}: hamburger menu ${JSON.stringify(menu)}`);
+    await page.evaluate(() => {
+      document.getElementById('menuPanel')?.classList.add('hide');
+      document.getElementById('menuScrim')?.classList.add('hide');
+      const mb = document.getElementById('menuBtn');
+      if (mb) mb.setAttribute('aria-expanded', 'false');
+    });
 
     const isCompactMobile = name === 'phone-portrait' || name === 'phone-landscape';
     if (isCompactMobile) {
@@ -205,8 +214,18 @@ try {
     }
 
     await page.evaluate((q) => window.__sunslide.setQuality(q), quality ?? 1);
-    // startGame() avoids flaky Playwright hits when the HUD overlay sits above the title panel.
-    await page.evaluate(() => window.__sunslide.startGame());
+    await page.locator('#go').scrollIntoViewIfNeeded();
+    const playClick = await page.evaluate(() => {
+      const go = document.getElementById('go');
+      if (!go) return { ok: false, why: 'missing #go' };
+      const r = go.getBoundingClientRect();
+      const cy = Math.min(Math.max(r.top + r.height / 2, 1), innerHeight - 1);
+      const cx = Math.min(Math.max(r.left + r.width / 2, 1), innerWidth - 1);
+      const top = document.elementFromPoint(cx, cy);
+      return { ok: top === go || go.contains(top), top: top?.id || top?.tagName };
+    });
+    if (!playClick.ok) fail(`${name}: #go not top element before click ${JSON.stringify(playClick)}`);
+    await page.click('#go', { timeout: 15_000, noWaitAfter: true });
     await page.waitForTimeout(800);
 
     const simTicks = large ? Math.min(SIM_TICKS, 2800) : SIM_TICKS;

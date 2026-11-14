@@ -240,7 +240,7 @@ function update(dt){
   sunLon=mod(sunLon-dt*TAU/dayLen(),TAU);
   shakeT=Math.max(0,shakeT-dt);
   cooldown=Math.max(0,cooldown-dt);
-  for(const T of tiles) if(T.anim){ T.anim.t+=dt/CFG.slideT; if(T.anim.t>=1){ T.anim=null; cooldown=CFG.slideCool; onSlideEnd(T); } }
+  for(const T of tiles) if(T.anim){ T.anim.t+=dt/slideSnapDurationSeconds(REDUCED); if(T.anim.t>=1){ T.anim=null; cooldown=CFG.slideCool; onSlideEnd(T); } }
   for(const g of bats) g.asleep=isHome(tiles[g.home]);
   if(state==='play'){
     if(readyT>0) readyT-=dt;

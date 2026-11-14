@@ -43,6 +43,18 @@ import {
   decorTangentScale,
   cellFootprintTangent,
 } from './src/logic/ecology.js';
+import {
+  slideSnapProgress,
+  slideSnapDurationSeconds,
+  slideLiftAtProgress,
+  ghostPreviewBlend,
+  ghostTilePosition,
+  ghostEmissiveIntensity,
+  movableHighlightIntensity,
+  slideDeltaToHole,
+  isMovableSlot,
+  screenDragPull,
+} from './src/logic/slide-feel.js';
 
 window.__ssBoot = true;
 

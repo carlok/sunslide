@@ -43,6 +43,11 @@ import {
   decorTangentScale,
   cellFootprintTangent,
 } from './src/logic/ecology.js';
+import {
+  atlasGridForCount,
+  atlasRectForTile,
+  mapUvToAtlas,
+} from './src/logic/floor-atlas.js';
 
 window.__ssBoot = true;
 
@@ -96,6 +101,7 @@ export function startSunslide() {
         qMode,
         useBloom,
         pixelRatio,
+        drawCalls: lastFrameDrawCalls,
         stageCss: [stageEl.clientWidth, stageEl.clientHeight],
         canvasBuffer: [glc.width, glc.height],
         composerRT: [composer.renderTarget1.width, composer.renderTarget1.height],
@@ -107,6 +113,7 @@ export function startSunslide() {
     isHome,
     lightSlot,
     renderInfo() { return renderer.info; },
+    sampleDrawCalls() { render(); return lastFrameDrawCalls; },
   };
   requestAnimationFrame(frame);
 }

@@ -12,6 +12,7 @@ function syncTiles(time){
     else if(elig.has(T.id)){ const lit=L>=CFG.slideLight; T.mFloor.emissive.copy(lit?C_HI:C_HIDARK); T.mFloor.emissiveIntensity=(lit?0.2:0.1)*(0.5+0.5*Math.sin(time*5)); }
     else T.mFloor.emissiveIntensity=0;
   }
+  syncTileBatchUniforms();
 }
 function syncEcology(){
   if(!ecologyState) return;
@@ -173,4 +174,9 @@ function syncScene(time,dt){
   pMat.uniforms.uPx.value=ffMat.uniforms.uPx.value=glc.height/(2*Math.tan(camera.fov*DEG/2));
 }
 let useBloom=true;
-function render(){ if(useBloom) composer.render(); else renderer.render(scene,camera); }
+function render(){
+  renderer.info.autoReset=false;
+  renderer.info.reset();
+  if(useBloom) composer.render(); else renderer.render(scene,camera);
+  lastFrameDrawCalls=renderer.info.render.calls;
+}

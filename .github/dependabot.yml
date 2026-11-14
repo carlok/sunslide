@@ -4,9 +4,25 @@ updates:
     directory: /
     schedule:
       interval: weekly
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 5
+    groups:
+      npm-dev:
+        dependency-type: development
+        patterns:
+          - '*'
+      npm-prod:
+        dependency-type: production
+        patterns:
+          - '*'
+    ignore:
+      - dependency-name: three
+        versions: ['>=0.161']
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
-    open-pull-requests-limit: 10
+    open-pull-requests-limit: 3
+    groups:
+      github-actions:
+        patterns:
+          - '*'

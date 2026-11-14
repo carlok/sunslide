@@ -1,5 +1,5 @@
 /** Bubble-pop ecology: permanent green cell patches + capped decor plan. */
-import { TW, TH, NT } from './constants.js';
+import { TW, TH, NT, CW, CH } from './constants.js';
 import { hash } from './helpers.js';
 
 export const N_CELLS = TW * TH;
@@ -10,6 +10,58 @@ export const ECOLOGY = {
   maxDecorTotal: 240,
   growSeconds: 0.38,
 };
+
+/**
+ * One maze floor cell in instanced surface-tangent units (gx→CW, gy→CH on the sphere).
+ * Renderer `surfMatrix` sx/sz must match these — not tile-space 0..1 counts.
+ */
+export const CELL_TANGENT = { sx: CW * 0.94, sz: CH * 0.94 };
+export const PATCH_THICK = 0.0035;
+export const PATCH_LIFT = 0.0018;
+/** Max decor height (sy + lift) and local placement radius in cell fractions. */
+export const DECOR_LIMITS = { maxHeight: 0.036, maxRadiusFrac: 0.4 };
+
+export function cellFootprintTangent() {
+  return { ...CELL_TANGENT, thick: PATCH_THICK, lift: PATCH_LIFT };
+}
+
+/** Local offset within one cell (game coords, ~0.5 = cell center). */
+export function decorLocalOffset(d) {
+  const spread = 0.7;
+  return { x: (d.lx - 0.5) * spread, y: (d.ly - 0.5) * spread };
+}
+
+/** Instanced decor scales; `scale` is the seeded 0..1-ish factor from planCellDecor. */
+export function decorTangentScale(kind, scale) {
+  const s = scale;
+  if (kind === 'grass') {
+    return { sx: 0.006 * s, sy: 0.009 * s, sz: 0.006 * s, lift: 0.003 };
+  }
+  if (kind === 'flower') {
+    return { sx: 0.0075 * s, sy: 0.0075 * s, sz: 0.0075 * s, lift: 0.0035 };
+  }
+  if (kind === 'tree') {
+    return {
+      trunk: { sx: 0.01 * s, sy: 0.018 * s, sz: 0.01 * s, lift: 0.004 },
+      top: { sx: 0.014 * s, sy: 0.022 * s, sz: 0.014 * s, lift: 0.014 * s },
+    };
+  }
+  return { sx: 0.006 * s, sy: 0.006 * s, sz: 0.006 * s, lift: 0.003 };
+}
+
+export function decorHeightEstimate(kind, scale) {
+  const sc = decorTangentScale(kind, scale);
+  if (kind === 'tree') return sc.top.sy + sc.top.lift;
+  return sc.sy + sc.lift;
+}
+
+export function decorInsideCell(d) {
+  const r = Math.max(Math.abs(d.lx - 0.5), Math.abs(d.ly - 0.5)) * 0.7;
+  return (
+    r <= DECOR_LIMITS.maxRadiusFrac &&
+    decorHeightEstimate(d.kind, d.scale) <= DECOR_LIMITS.maxHeight
+  );
+}
 
 export function cellKey(tileId, x, y) {
   return tileId * N_CELLS + y * TW + x;
@@ -47,7 +99,7 @@ export function planCellDecor(tileId, x, y) {
       kind: 'tree',
       lx: 0.22 + rng(tileId, x, y, 1) * 0.56,
       ly: 0.22 + rng(tileId, x, y, 2) * 0.56,
-      scale: 0.85 + rng(tileId, x, y, 3) * 0.35,
+      scale: 0.55 + rng(tileId, x, y, 3) * 0.35,
       yaw: rng(tileId, x, y, 4) * Math.PI * 2,
     });
   }
@@ -57,7 +109,7 @@ export function planCellDecor(tileId, x, y) {
       kind: 'flower',
       lx: 0.15 + rng(tileId, x, y, 10 + f) * 0.7,
       ly: 0.15 + rng(tileId, x, y, 20 + f) * 0.7,
-      scale: 0.7 + rng(tileId, x, y, 30 + f) * 0.5,
+      scale: 0.65 + rng(tileId, x, y, 30 + f) * 0.35,
       hue: rng(tileId, x, y, 40 + f),
     });
   }
@@ -67,7 +119,7 @@ export function planCellDecor(tileId, x, y) {
       kind: 'grass',
       lx: 0.1 + rng(tileId, x, y, 50 + g) * 0.8,
       ly: 0.1 + rng(tileId, x, y, 60 + g) * 0.8,
-      scale: 0.6 + rng(tileId, x, y, 70 + g) * 0.55,
+      scale: 0.55 + rng(tileId, x, y, 70 + g) * 0.35,
       yaw: rng(tileId, x, y, 80 + g) * Math.PI * 2,
     });
   }

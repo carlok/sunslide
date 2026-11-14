@@ -189,6 +189,14 @@ try {
     if (!eco.cell) fail(`${name}: no bubble cell for ecology check`);
     if (eco.after <= eco.before) fail(`${name}: pop should green a tile (${eco.before}→${eco.after})`);
 
+  const ecoLayout = await page.evaluate(() => window.__sunslide.getEcologyLayout());
+  const CW = Math.PI * 2 / 32;
+  const CH = (2 * (70 * Math.PI / 180)) / 16;
+  if (ecoLayout.sx > CW * 1.05 || ecoLayout.sz > CH * 1.05) {
+    fail(`${name}: ecology patch too large ${JSON.stringify(ecoLayout)} vs cell ${CW.toFixed(4)}×${CH.toFixed(4)}`);
+  }
+  if (ecoLayout.thick > 0.012) fail(`${name}: ecology patch too thick ${ecoLayout.thick}`);
+
     const layout = await page.evaluate(() => {
       const r = (id) => document.getElementById(id).getBoundingClientRect();
       const s = r('stage'),

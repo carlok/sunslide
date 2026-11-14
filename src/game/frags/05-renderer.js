@@ -355,10 +355,10 @@ const ECO_PATCH_MAX=ECOLOGY.maxCells;
 const ecoPatchMat=new THREE.MeshStandardMaterial({color:'#4caf5a',roughness:0.9,emissive:'#1e3d24',emissiveIntensity:0.12});
 const ecoPatches=inst(new THREE.BoxGeometry(1,1,1),ecoPatchMat,ECO_PATCH_MAX,0);
 ecoPatches.receiveShadow=true;
-const ecoGrass=inst(new THREE.CylinderGeometry(0.5,0.65,1,4),new THREE.MeshStandardMaterial({color:'#6ec454',roughness:0.85}),ECOLOGY.maxDecorTotal,1);
-const ecoFlower=inst(new THREE.IcosahedronGeometry(0.5,0),new THREE.MeshStandardMaterial({color:'#ffb8d8',roughness:0.55,emissive:'#55152a',emissiveIntensity:0.25}),ECOLOGY.maxDecorTotal,1);
-const ecoTreeTrunk=inst(new THREE.CylinderGeometry(0.18,0.22,0.55,5),new THREE.MeshStandardMaterial({color:'#7a5a3a',roughness:0.95}),ECOLOGY.maxDecorTotal,1);
-const ecoTreeTop=inst(new THREE.ConeGeometry(0.42,0.85,6),new THREE.MeshStandardMaterial({color:'#3f9a48',roughness:0.88}),ECOLOGY.maxDecorTotal,1);
+const ecoGrass=inst(new THREE.CylinderGeometry(0.35,0.45,1,4),new THREE.MeshStandardMaterial({color:'#6ec454',roughness:0.85}),ECOLOGY.maxDecorTotal,1);
+const ecoFlower=inst(new THREE.IcosahedronGeometry(0.35,0),new THREE.MeshStandardMaterial({color:'#ffb8d8',roughness:0.55,emissive:'#55152a',emissiveIntensity:0.25}),ECOLOGY.maxDecorTotal,1);
+const ecoTreeTrunk=inst(new THREE.CylinderGeometry(0.2,0.24,0.5,5),new THREE.MeshStandardMaterial({color:'#7a5a3a',roughness:0.95}),ECOLOGY.maxDecorTotal,1);
+const ecoTreeTop=inst(new THREE.ConeGeometry(0.38,0.7,6),new THREE.MeshStandardMaterial({color:'#3f9a48',roughness:0.88}),ECOLOGY.maxDecorTotal,1);
 ecoGrass.castShadow=ecoTreeTrunk.castShadow=ecoTreeTop.castShadow=true;
 
 /* ---------- blooming flowers on cleared islands ---------- */

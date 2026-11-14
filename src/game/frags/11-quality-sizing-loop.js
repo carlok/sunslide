@@ -81,7 +81,7 @@ function pollPad(){
 function frame(ts){
   requestAnimationFrame(frame);
   const now=ts/1000, dt=Math.min(0.05,Math.max(0.0001,(now-lastT)||0.016)); lastT=now;
-  if(tickAdaptiveDpr(adaptiveDprState,dt*1000)) resize();
+  if(!window.__ssSmokeNoFullscreen && tickAdaptiveDpr(adaptiveDprState,dt*1000)) resize();
   perfSample(dt*1000);
   pollPad();
   if(!paused) update(dt);

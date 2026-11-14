@@ -23,7 +23,7 @@ document.querySelectorAll('#pad button[data-d]').forEach(b=>b.addEventListener('
 $('bView').addEventListener('pointerdown',e=>{ e.preventDefault(); setView(!viewFar); });
 $('bView2').addEventListener('click',()=>setView(!viewFar));
 let sx0=0,sy0=0,sid=-1;
-stageEl.addEventListener('pointerdown',e=>{ if(e.target.closest('.panel,#tb')) return; sx0=e.clientX; sy0=e.clientY; sid=e.pointerId; });
+stageEl.addEventListener('pointerdown',e=>{ if(e.target.closest('.panel,#tb,#overlay,#menuBtn,#menuPanel')) return; sx0=e.clientX; sy0=e.clientY; sid=e.pointerId; });
 function endPtr(e,cancel){
   if(e.pointerId!==sid) return; sid=-1; if(cancel||paused) return;
   const dx=e.clientX-sx0, dy=e.clientY-sy0;

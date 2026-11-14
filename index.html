@@ -25,22 +25,56 @@
 <body>
 
 <main id="app" aria-label="Sunslide game">
-  <header id="hud" aria-label="Score and lives">
-    <div><small id="hud-score-l">Score</small><span id="score" aria-labelledby="hud-score-l">0</span></div>
-    <div class="c"><small id="hud-level-l">Sector</small><span id="level" aria-labelledby="hud-level-l">1</span></div>
-    <div class="c"><small id="hud-left-l">Bubbles</small><span id="left" aria-labelledby="hud-left-l">0</span></div>
-    <div class="c"><small id="hud-home-l">Home</small><span id="home" aria-labelledby="hud-home-l">0/15</span></div>
-    <div class="r"><small id="hud-lives-l">Lives</small><span id="lives" aria-labelledby="hud-lives-l"></span></div>
-  </header>
   <section id="stage" aria-label="3D planet view">
     <canvas id="gl" aria-hidden="true"></canvas>
     <canvas id="fx" aria-hidden="true"></canvas>
     <div id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+    <button type="button" id="menuBtn" class="menu-btn" aria-expanded="false" aria-controls="menuPanel" aria-label="Menu, credits and controls">
+      <span class="menu-glyph" aria-hidden="true"></span>
+    </button>
+    <div id="menuScrim" class="menu-scrim hide" aria-hidden="true" tabindex="-1"></div>
+    <div id="menuPanel" class="menu-panel hide" role="dialog" aria-modal="true" aria-labelledby="menuTitle" tabindex="-1">
+      <h2 id="menuTitle">Credits &amp; controls</h2>
+      <div id="credits" class="menu-block">
+        <p><strong>Sunslide</strong> — bubble frog arcade on sliding meadow islands. © <a href="https://github.com/carlok" rel="noopener noreferrer">carlok</a>.</p>
+        <p>Source <a href="https://github.com/carlok/sunslide/blob/main/LICENSE" rel="noopener noreferrer">Apache-2.0</a>. Built with <a href="https://threejs.org/" rel="noopener noreferrer">three.js</a> (MIT) and Vite.</p>
+        <p><a href="https://github.com/carlok/sunslide" rel="noopener noreferrer">github.com/carlok/sunslide</a></p>
+      </div>
+      <div id="keyshelp" class="menu-block" aria-label="Control reference">
+        <p><b>Arrows / WASD</b> hop · <b>Space</b> or <b>wheel</b> planet view · <b>P</b> pause · <b>M</b> music</p>
+        <p><b>Click the map</b> to slide an island or set a waypoint</p>
+        <p><b>Gamepad</b>: stick/D-pad hop · <b>LB/RB</b> pick island · <b>A</b> slide · <b>X/Y</b> view · <b>Start</b> pause · <b>Select</b> music</p>
+      </div>
+    </div>
     <div id="tb" role="toolbar" aria-label="Game controls">
       <button type="button" id="bView2" aria-label="Toggle planet view">◎</button>
       <button type="button" id="bPause" aria-label="Pause game">❚❚</button>
       <button type="button" id="bMus" aria-label="Toggle music">♪</button>
     </div>
+    <aside id="overlay" aria-label="Game HUD">
+      <header id="hud" aria-label="Score and lives">
+        <div><small id="hud-score-l">Score</small><span id="score" aria-labelledby="hud-score-l">0</span></div>
+        <div class="c"><small id="hud-level-l">Sector</small><span id="level" aria-labelledby="hud-level-l">1</span></div>
+        <div class="c"><small id="hud-left-l">Bubbles</small><span id="left" aria-labelledby="hud-left-l">0</span></div>
+        <div class="c"><small id="hud-home-l">Home</small><span id="home" aria-labelledby="hud-home-l">0/15</span></div>
+        <div class="r"><small id="hud-lives-l">Lives</small><span id="lives" aria-labelledby="hud-lives-l"></span></div>
+      </header>
+      <footer id="status" aria-label="Day phase and hints">
+        <span id="chip" role="status" aria-live="polite">DAY</span>
+        <span id="hint"></span>
+      </footer>
+      <div id="mapbox">
+        <canvas id="map" role="img" aria-label="Island map: tap to slide an adjacent island or set a waypoint"></canvas>
+        <p id="mapcap">Map · tap: slide / waypoint</p>
+      </div>
+      <nav id="pad" aria-label="Direction pad">
+        <button type="button" class="u" data-d="0" aria-label="Up">▲</button>
+        <button type="button" class="l" data-d="3" aria-label="Left">◀</button>
+        <button type="button" class="m" id="bView" aria-label="Toggle planet view">VIEW</button>
+        <button type="button" class="rt" data-d="1" aria-label="Right">▶</button>
+        <button type="button" class="d" data-d="2" aria-label="Down">▼</button>
+      </nav>
+    </aside>
     <div id="ov" class="panel" role="dialog" aria-modal="true" aria-labelledby="title-main">
       <div id="tBlock">
         <h1 id="title-main">SUNSLIDE</h1>
@@ -57,7 +91,7 @@
         </ul>
         <button type="button" class="big" id="go">PLAY</button>
         <p class="keys" id="bestline"></p>
-        <p class="keys">Keys: arrows/WASD · Space view · P pause · M music · gamepads supported</p>
+        <p class="keys">☰ Menu for credits and full control reference · gamepads supported</p>
       </div>
       <div id="oBlock" class="hide">
         <h1 id="title-over">LIGHTS OUT</h1>
@@ -76,24 +110,6 @@
       </div>
       <div class="row"><button type="button" class="sm" id="restart">Restart</button></div>
     </div>
-  </section>
-  <footer id="status" aria-label="Day phase and hints">
-    <span id="chip" role="status" aria-live="polite">DAY</span>
-    <span id="hint"></span>
-  </footer>
-  <section id="bottom" aria-label="Map and controls">
-    <div id="mapbox">
-      <canvas id="map" role="img" aria-label="Island map: tap to slide an adjacent island or set a waypoint"></canvas>
-      <p id="mapcap">Map · tap: slide / waypoint</p>
-    </div>
-    <p id="keyshelp"><b>Arrows / WASD</b> hop · <b>Space</b> or <b>wheel</b> planet view · <b>P</b> pause · <b>M</b> music<br><b>Click the map</b> to slide an island or set a waypoint<br><b>Gamepad</b>: stick/D-pad hop · <b>LB/RB</b> pick island · <b>A</b> slide · <b>X/Y</b> view · <b>Start</b> pause · <b>Select</b> music</p>
-    <nav id="pad" aria-label="Direction pad">
-      <button type="button" class="u" data-d="0" aria-label="Up">▲</button>
-      <button type="button" class="l" data-d="3" aria-label="Left">◀</button>
-      <button type="button" class="m" id="bView" aria-label="Toggle planet view">VIEW</button>
-      <button type="button" class="rt" data-d="1" aria-label="Right">▶</button>
-      <button type="button" class="d" data-d="2" aria-label="Down">▼</button>
-    </nav>
   </section>
 </main>
 

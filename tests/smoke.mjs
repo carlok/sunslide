@@ -131,6 +131,31 @@ try {
   // 'load' only — networkidle can hang on WebGL / rAF; gameplay readiness uses __sunslide.
     await page.goto(baseUrl, { waitUntil: 'load', timeout: 60_000 });
     await page.waitForFunction(() => !!window.__sunslide, null, { timeout: 30_000 });
+
+    const menu = await page.evaluate(async () => {
+      const btn = document.getElementById('menuBtn');
+      const panel = document.getElementById('menuPanel');
+      if (!btn || !panel) return { ok: false, why: 'menu nodes missing' };
+      btn.click();
+      const open =
+        btn.getAttribute('aria-expanded') === 'true' && !panel.classList.contains('hide');
+      document.dispatchEvent(
+        new KeyboardEvent('keydown', { code: 'Escape', bubbles: true, cancelable: true }),
+      );
+      const closed =
+        btn.getAttribute('aria-expanded') === 'false' && panel.classList.contains('hide');
+      btn.click();
+      const open2 =
+        btn.getAttribute('aria-expanded') === 'true' && !panel.classList.contains('hide');
+      document.getElementById('stage').dispatchEvent(
+        new PointerEvent('pointerdown', { bubbles: true, clientX: 4, clientY: innerHeight - 4 }),
+      );
+      const outside =
+        btn.getAttribute('aria-expanded') === 'false' && panel.classList.contains('hide');
+      return { ok: open && closed && open2 && outside, open, closed, open2, outside };
+    });
+    if (!menu.ok) fail(`${name}: hamburger menu ${JSON.stringify(menu)}`);
+
     await page.evaluate((q) => window.__sunslide.setQuality(q), quality ?? 1);
     await page.click('#go', { timeout: 10_000, noWaitAfter: true });
     await page.waitForTimeout(800);
@@ -200,9 +225,13 @@ try {
     const layout = await page.evaluate(() => {
       const r = (id) => document.getElementById(id).getBoundingClientRect();
       const s = r('stage'),
-        m = r('map');
+        m = r('map'),
+        o = r('overlay');
       return {
         stage: [s.width, s.height],
+        viewport: [innerWidth, innerHeight],
+        fillsViewport: s.width >= innerWidth * 0.96 && s.height >= innerHeight * 0.96,
+        overlayPresent: o.width > 80 && o.height > 80,
         mapVisible: m.width > 60 && m.height > 40,
         overflowX: document.documentElement.scrollWidth > innerWidth + 1,
         overflowY: document.documentElement.scrollHeight > innerHeight + 1,
@@ -210,6 +239,9 @@ try {
     });
     if (layout.stage[0] < 200 || layout.stage[1] < 200)
       fail(`${name}: stage too small ${layout.stage}`);
+    if (!layout.fillsViewport)
+      fail(`${name}: stage should fill viewport ${layout.stage} vs ${layout.viewport}`);
+    if (!layout.overlayPresent) fail(`${name}: HUD overlay missing or too small`);
     if (!layout.mapVisible) fail(`${name}: map not visible`);
     if (layout.overflowX || layout.overflowY) fail(`${name}: page overflows the viewport`);
 

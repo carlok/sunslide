@@ -156,6 +156,54 @@ try {
     });
     if (!menu.ok) fail(`${name}: hamburger menu ${JSON.stringify(menu)}`);
 
+    const isCompactMobile = name === 'phone-portrait' || name === 'phone-landscape';
+    if (isCompactMobile) {
+      await page.evaluate(() => localStorage.removeItem('sunslide.mapVisible'));
+      await page.reload({ waitUntil: 'load' });
+      await page.waitForFunction(() => !!window.__sunslide, null, { timeout: 30_000 });
+      const mapT0 = await page.evaluate(() => {
+        const btn = document.getElementById('mapToggle');
+        const panel = document.getElementById('mapPanel');
+        if (!btn || !panel) return { ok: false, why: 'map toggle nodes missing' };
+        if (!btn.classList.contains('map-toggle-active')) {
+          return { ok: false, why: 'toggle should be active on compact viewport' };
+        }
+        return {
+          ok:
+            panel.classList.contains('map-hidden') &&
+            btn.getAttribute('aria-pressed') === 'false',
+        };
+      });
+      if (!mapT0.ok) fail(`${name}: map hidden by default ${JSON.stringify(mapT0)}`);
+      const mapOpen = await page.evaluate(() => {
+        const btn = document.getElementById('mapToggle');
+        const panel = document.getElementById('mapPanel');
+        const map = document.getElementById('map');
+        btn.click();
+        const box = map.getBoundingClientRect();
+        return {
+          ok:
+            !panel.classList.contains('map-hidden') &&
+            btn.getAttribute('aria-pressed') === 'true' &&
+            btn.getAttribute('aria-expanded') === 'true' &&
+            box.height > 40,
+        };
+      });
+      if (!mapOpen.ok) fail(`${name}: map toggle open ${JSON.stringify(mapOpen)}`);
+      await page.reload({ waitUntil: 'load' });
+      await page.waitForFunction(() => !!window.__sunslide, null, { timeout: 30_000 });
+      const mapPersist = await page.evaluate(() => {
+        const btn = document.getElementById('mapToggle');
+        const panel = document.getElementById('mapPanel');
+        return {
+          ok:
+            btn?.getAttribute('aria-pressed') === 'true' &&
+            !panel?.classList.contains('map-hidden'),
+        };
+      });
+      if (!mapPersist.ok) fail(`${name}: map preference not persisted ${JSON.stringify(mapPersist)}`);
+    }
+
     await page.evaluate((q) => window.__sunslide.setQuality(q), quality ?? 1);
     await page.click('#go', { timeout: 10_000, noWaitAfter: true });
     await page.waitForTimeout(800);
@@ -242,7 +290,17 @@ try {
     if (!layout.fillsViewport)
       fail(`${name}: stage should fill viewport ${layout.stage} vs ${layout.viewport}`);
     if (!layout.overlayPresent) fail(`${name}: HUD overlay missing or too small`);
-    if (!layout.mapVisible) fail(`${name}: map not visible`);
+    if (!isCompactMobile && !layout.mapVisible) fail(`${name}: map not visible`);
+    if (isCompactMobile && layout.mapVisible) {
+      const toggledOn = await page.evaluate(() => {
+        const panel = document.getElementById('mapPanel');
+        return (
+          document.getElementById('mapToggle')?.getAttribute('aria-pressed') === 'true' &&
+          !panel?.classList.contains('map-hidden')
+        );
+      });
+      if (!toggledOn) fail(`${name}: map should stay visible after toggle/persist checks`);
+    }
     if (layout.overflowX || layout.overflowY) fail(`${name}: page overflows the viewport`);
 
     if (large) {

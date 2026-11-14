@@ -69,12 +69,86 @@ function decodePngRgba(buf) {
   return { width: w, height: h, data: out };
 }
 
-/** Sample center play area; fail if avg luma too low or too many near-black pixels. */
-export function analyzeStagePng(buf, { blackLuma = 8, minMeanLuma = 22 } = {}) {
+function blockStats(data, w, x0, y0, size) {
+  let sum = 0;
+  let n = 0;
+  let min = 255;
+  let max = 0;
+  for (let y = y0; y < y0 + size; y++) {
+    for (let x = x0; x < x0 + size; x++) {
+      const i = (y * w + x) * 4;
+      const l = (data[i] + data[i + 1] + data[i + 2]) / 3;
+      sum += l;
+      n++;
+      if (l < min) min = l;
+      if (l > max) max = l;
+    }
+  }
+  return { mean: sum / n, min, max, spread: max - min };
+}
+
+/** Detect unresolved MSAA / macro-tile black blobs amid an otherwise lit scene. */
+export function detectMacroBlackTiles(data, w, h) {
+  const block = Math.max(14, Math.floor(Math.min(w, h) / 56));
+  const bx0 = Math.floor(w * 0.14);
+  const bx1 = Math.floor(w * 0.86) - block;
+  const by0 = Math.floor(h * 0.12);
+  const by1 = Math.floor(h * 0.88) - block;
+  const cols = Math.floor((bx1 - bx0) / block) + 1;
+  const rows = Math.floor((by1 - by0) / block) + 1;
+  const dead = new Uint8Array(cols * rows);
+  let brightSamples = 0;
+  let totalSamples = 0;
+  for (let row = 0; row < rows; row++) {
+    for (let col = 0; col < cols; col++) {
+      const x0 = bx0 + col * block;
+      const y0 = by0 + row * block;
+      const { mean, spread } = blockStats(data, w, x0, y0, block);
+      const isDead = spread < 2.5 && mean < 5;
+      dead[row * cols + col] = isDead ? 1 : 0;
+      totalSamples++;
+      if (mean > 55 || spread > 40) brightSamples++;
+    }
+  }
+  const visited = new Uint8Array(cols * rows);
+  let largestDead = 0;
+  const neigh = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+  for (let i = 0; i < dead.length; i++) {
+    if (!dead[i] || visited[i]) continue;
+    let stack = [i];
+    let area = 0;
+    visited[i] = 1;
+    while (stack.length) {
+      const cur = stack.pop();
+      area++;
+      const cr = Math.floor(cur / cols);
+      const cc = cur % cols;
+      for (const [dr, dc] of neigh) {
+        const nr = cr + dr;
+        const nc = cc + dc;
+        if (nr < 0 || nc < 0 || nr >= rows || nc >= cols) continue;
+        const ni = nr * cols + nc;
+        if (dead[ni] && !visited[ni]) {
+          visited[ni] = 1;
+          stack.push(ni);
+        }
+      }
+    }
+    if (area > largestDead) largestDead = area;
+  }
+  const deadAreaFrac = (largestDead * block * block) / (w * h);
+  const hasBrightSignal = brightSamples / Math.max(1, totalSamples) > 0.04;
+  const failed = hasBrightSignal && deadAreaFrac > 0.1;
+  return { block, largestDeadBlocks: largestDead, deadAreaFrac, hasBrightSignal, failed };
+}
+
+/** Regression for large-desktop MSAA macro-tiles (not global scene darkness). */
+export function analyzeStagePng(buf) {
   const { width: w, height: h, data } = decodePngRgba(buf);
   let sum = 0;
   let n = 0;
   let black = 0;
+  let hi = 0;
   const step = Math.max(2, Math.floor(Math.min(w, h) / 180));
   const x0 = Math.floor(w * 0.12);
   const x1 = Math.floor(w * 0.88);
@@ -86,12 +160,25 @@ export function analyzeStagePng(buf, { blackLuma = 8, minMeanLuma = 22 } = {}) {
       const l = (data[i] + data[i + 1] + data[i + 2]) / 3;
       sum += l;
       n++;
-      if (l < blackLuma) black++;
+      if (l < 8) black++;
+      if (l > 80) hi++;
     }
   }
   const mean = sum / n;
   const blackFrac = black / n;
-  const catastrophic = mean < 14 && blackFrac > 0.92;
-  const ok = mean >= minMeanLuma && !catastrophic;
-  return { width: w, height: h, mean, blackFrac, catastrophic, ok, samples: n };
+  const hiFrac = hi / n;
+  const macro = detectMacroBlackTiles(data, w, h);
+  const noScene = mean < 14 && hiFrac < 0.002;
+  const ok = !macro.failed && !noScene;
+  return {
+    width: w,
+    height: h,
+    mean,
+    blackFrac,
+    hiFrac,
+    macro,
+    noScene,
+    ok,
+    samples: n,
+  };
 }

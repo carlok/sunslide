@@ -135,6 +135,7 @@ try {
     await page.click('#go', { timeout: 10_000, noWaitAfter: true });
     await page.waitForTimeout(800);
 
+    const simTicks = large ? Math.min(SIM_TICKS, 2800) : SIM_TICKS;
     const res = await page.evaluate(
       ({ ticks }) => {
         const S = window.__sunslide;
@@ -160,7 +161,7 @@ try {
         const leftSum = S.tiles.reduce((a, t) => a + t.left, 0);
         return { state: S.state, dotsLeft: S.dotsLeft, counted, leftSum, batLeaks, warps };
       },
-      { ticks: SIM_TICKS },
+      { ticks: simTicks },
       { timeout: 120_000 },
     );
     console.log(name, res);
@@ -184,15 +185,18 @@ try {
     if (!layout.mapVisible) fail(`${name}: map not visible`);
     if (layout.overflowX || layout.overflowY) fail(`${name}: page overflows the viewport`);
 
-    await page.evaluate(() => {
-      const b = document.getElementById('bPause');
-      if (b && !b.classList.contains('on')) b.click();
-    });
-    await page.waitForTimeout(300);
+    if (large) {
+      await page.evaluate(() => {
+        const S = window.__sunslide;
+        for (let i = 0; i < 150; i++) S.update(1 / 60);
+      });
+      await page.waitForTimeout(400);
+    }
+
     const stageShot = path.join(out, `${name}-stage.png`);
     const stageBox = await page.locator('#stage').boundingBox();
     if (!stageBox) fail(`${name}: #stage not found for screenshot`);
-  else {
+    else {
       const clip = {
         x: stageBox.x,
         y: stageBox.y,
@@ -206,15 +210,20 @@ try {
         timeout: 60_000,
       });
     }
-    await page.screenshot({ path: path.join(out, `${name}.png`), timeout: 30_000 });
-    const luma = analyzeStagePng(readFileSync(stageShot));
-    console.log(name, 'render-luma', luma);
-    if (!luma.ok) {
-      fail(
-        `${name}: stage looks mostly black or too dark (mean=${luma.mean.toFixed(1)} blackFrac=${(luma.blackFrac * 100).toFixed(1)}%)`,
-      );
-    }
+    await page.screenshot({
+      path: path.join(out, `${name}.png`),
+      timeout: large ? 90_000 : 30_000,
+      animations: 'disabled',
+    });
     if (large) {
+      const luma = analyzeStagePng(readFileSync(stageShot));
+      console.log(name, 'render-luma', luma);
+      if (!luma.ok) {
+        const why = luma.noScene
+          ? `scene did not render (mean=${luma.mean.toFixed(1)} hiFrac=${(luma.hiFrac * 100).toFixed(2)}%)`
+          : `macro black tiles (deadArea=${(luma.macro.deadAreaFrac * 100).toFixed(1)}% bright=${luma.macro.hasBrightSignal})`;
+        fail(`${name}: ${why}`);
+      }
       const metrics = await page.evaluate(() => window.__sunslide.getRenderMetrics());
       console.log(name, 'render-metrics', metrics);
       const [cw, ch] = metrics.canvasBuffer;

@@ -205,7 +205,8 @@ try {
     }
 
     await page.evaluate((q) => window.__sunslide.setQuality(q), quality ?? 1);
-    await page.click('#go', { timeout: 10_000, noWaitAfter: true });
+    // startGame() avoids flaky Playwright hits when the HUD overlay sits above the title panel.
+    await page.evaluate(() => window.__sunslide.startGame());
     await page.waitForTimeout(800);
 
     const simTicks = large ? Math.min(SIM_TICKS, 2800) : SIM_TICKS;

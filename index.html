@@ -36,7 +36,7 @@
     <div id="menuPanel" class="menu-panel hide" role="dialog" aria-modal="true" aria-labelledby="menuTitle" tabindex="-1">
       <h2 id="menuTitle">Credits &amp; controls</h2>
       <div id="credits" class="menu-block">
-        <p><strong>Sunslide</strong> — bubble frog arcade on sliding meadow islands. © <a href="https://github.com/carlok" rel="noopener noreferrer">carlok</a>.</p>
+        <p><strong>Sunslide</strong> — hop as Pip the bubble frog on a tiny planet: a sunlit <b>15-puzzle of sliding meadow islands</b>. © <a href="https://github.com/carlok" rel="noopener noreferrer">carlok</a>.</p>
         <p>Source <a href="https://github.com/carlok/sunslide/blob/main/LICENSE" rel="noopener noreferrer">Apache-2.0</a>. Built with <a href="https://threejs.org/" rel="noopener noreferrer">three.js</a> (MIT) and Vite.</p>
         <p><a href="https://github.com/carlok/sunslide" rel="noopener noreferrer">github.com/carlok/sunslide</a></p>
       </div>
@@ -64,8 +64,11 @@
         <span id="hint"></span>
       </footer>
       <div id="mapbox">
-        <canvas id="map" role="img" aria-label="Island map: tap to slide an adjacent island or set a waypoint"></canvas>
-        <p id="mapcap">Map · tap: slide / waypoint</p>
+        <button type="button" id="mapToggle" class="map-toggle" aria-controls="mapPanel" aria-expanded="false" aria-pressed="false" aria-label="Show island map">Map</button>
+        <div id="mapPanel">
+          <canvas id="map" role="img" aria-label="Island map: tap to slide an adjacent island or set a waypoint"></canvas>
+          <p id="mapcap">Map · tap: slide / waypoint</p>
+        </div>
       </div>
       <nav id="pad" aria-label="Direction pad">
         <button type="button" class="u" data-d="0" aria-label="Up">▲</button>

@@ -39,7 +39,7 @@ export function initAppMenu() {
 
   function onOutside(e) {
     const t = e.target;
-    if (panel.contains(t) || btn.contains(t)) return;
+    if (panel.contains(t) || btn.contains(t) || scrim === t) return;
     close();
   }
 

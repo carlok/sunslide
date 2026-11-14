@@ -58,6 +58,10 @@ Pushes to `main` also deploy `dist/` to GitHub Pages at `/sunslide/`.
 - [Game design & tuning](docs/GAME_DESIGN.md)
 - [CLAUDE.md](CLAUDE.md) — architecture for agents and contributors
 
+## Credits
+
+**Sunslide** — hop as Pip the bubble frog on a tiny planet: a sunlit **15-puzzle of sliding meadow islands**. © [carlok](https://github.com/carlok). Source: [Apache-2.0](LICENSE). Built with [three.js](https://threejs.org/) (MIT) and Vite.
+
 ## Licence
 
 Sunslide source is licensed under **Apache-2.0** ([LICENSE](LICENSE)). **three.js** is [MIT](https://github.com/mrdoob/three.js/blob/dev/LICENSE) via npm.

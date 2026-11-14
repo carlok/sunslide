@@ -122,6 +122,11 @@ try {
     });
     await ctx.addInitScript(() => {
       window.__ssSmokeNoFullscreen = true;
+      try {
+        localStorage.setItem('sunslide.tutorialSeen', JSON.stringify(true));
+      } catch {
+        /* private mode */
+      }
     });
     const page = await ctx.newPage();
     page.setDefaultTimeout(60_000);
@@ -225,7 +230,7 @@ try {
       return { ok: top === go || go.contains(top), top: top?.id || top?.tagName };
     });
     if (!playClick.ok) fail(`${name}: #go not top element before click ${JSON.stringify(playClick)}`);
-    await page.click('#go', { timeout: 15_000, noWaitAfter: true });
+    await page.locator('#go').click({ timeout: 15_000, noWaitAfter: true, force: true });
     await page.waitForTimeout(800);
 
     const simTicks = large ? Math.min(SIM_TICKS, 2800) : SIM_TICKS;

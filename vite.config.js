@@ -43,6 +43,11 @@ import {
   decorTangentScale,
   cellFootprintTangent,
 } from './src/logic/ecology.js';
+import {
+  resolveShadowSettings,
+  SHADOW_FRUSTUM,
+  shouldUpdateShadowMap,
+} from './src/logic/shadows-policy.js';
 
 window.__ssBoot = true;
 

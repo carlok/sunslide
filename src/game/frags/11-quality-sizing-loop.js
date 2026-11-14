@@ -1,11 +1,14 @@
 const QUAL=[{n:'Low',dpr:1,px:0.7e6,shadow:0,bloom:false,blades:7000,flowers:700,ff:200},{n:'Medium',dpr:1.5,px:1.4e6,shadow:1024,bloom:true,blades:15000,flowers:1500,ff:400},{n:'High',dpr:2,px:2.4e6,shadow:2048,bloom:true,blades:30000,flowers:2800,ff:600}];
 let qMode=store.get('quality','auto'); if(![ 'auto',0,1,2].includes(qMode)) qMode='auto';
 let qLevel=qMode==='auto'?2:qMode, pixelRatio=1, perfStart=performance.now(), perfAcc=0, perfN=0, renderedPaused=false;
+function shadowDeviceCtx(){ return { qualityShadow:QUAL[qLevel].shadow, coarsePointer:matchMedia('(pointer: coarse)').matches, hardwareConcurrency:navigator.hardwareConcurrency, deviceMemory:navigator.deviceMemory, viewportWidth:stageEl.clientWidth }; }
 function applyQuality(){
   const q=QUAL[qLevel];
   useBloom=q.bloom;
-  sunL.castShadow=q.shadow>0;
-  if(q.shadow&&sunL.shadow.mapSize.x!==q.shadow){ sunL.shadow.mapSize.set(q.shadow,q.shadow); if(sunL.shadow.map){ sunL.shadow.map.dispose(); sunL.shadow.map=null; } }
+  const sh=resolveShadowSettings(shadowDeviceCtx());
+  sunL.castShadow=sh.enabled;
+  if(sh.enabled&&sunL.shadow.mapSize.x!==sh.mapSize){ sunL.shadow.mapSize.set(sh.mapSize,sh.mapSize); if(sunL.shadow.map){ sunL.shadow.map.dispose(); sunL.shadow.map=null; } }
+  else if(!sh.enabled&&sunL.shadow.map){ sunL.shadow.map.dispose(); sunL.shadow.map=null; }
   blades.geometry.instanceCount=q.blades; flowers.count=q.flowers; ffPts.geometry.setDrawRange(0,q.ff);
   resize(); syncButtons();
 }

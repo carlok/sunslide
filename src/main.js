@@ -1,3 +1,5 @@
-import { startSunslide } from 'virtual:sunslide-game';
-
-startSunslide();
+async function boot() {
+  const { startSunslide } = await import('virtual:sunslide-game');
+  startSunslide();
+}
+boot();

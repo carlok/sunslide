@@ -83,6 +83,15 @@ export function startSunslide() {
 export default defineConfig({
   base: '/sunslide/',
   plugins: [sunslideGamePlugin()],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules/three')) return 'three';
+        },
+      },
+    },
+  },
   test: {
     include: ['src/**/*.test.js', 'tests/unit/**/*.test.js'],
     coverage: {

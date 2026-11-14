@@ -1,9 +1,10 @@
-:root{--bg:#04050d;--ink:#eef2ff;--dim:#8f98bf;--gold:#ffd25e;--teal:#3fd6ea;--panel:#0c1130;--line:#28316a}
+:root{--bg:#04050d;--ink:#eef2ff;--dim:#a8b2d9;--gold:#ffd25e;--teal:#3fd6ea;--panel:#0c1130;--line:#28316a}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;height:100%;background:radial-gradient(120% 90% at 50% 30%,#0a1030 0%,var(--bg) 70%);color:var(--ink);font:14px/1.35 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overflow:hidden;overscroll-behavior:none;-webkit-user-select:none;user-select:none}
 button{font:inherit;color:inherit;cursor:pointer}
 #app{max-width:560px;margin:0 auto;height:100%;height:100dvh;display:flex;flex-direction:column;padding:calc(env(safe-area-inset-top) + 6px) 10px calc(env(safe-area-inset-bottom) + 8px)}
-#hud{display:grid;grid-template-columns:1.25fr .8fr 1fr .9fr 1fr;gap:4px;padding:0 2px 6px;font-variant-numeric:tabular-nums;font-weight:700;font-size:15px}
+#hud{display:grid;grid-template-columns:1.25fr .8fr 1fr .9fr 1fr;gap:4px;padding:0 2px 6px;font-variant-numeric:tabular-nums;font-weight:700;font-size:15px;margin:0}
+#hud small{color:var(--dim)}
 #hud small{display:block;font-size:9.5px;font-weight:600;color:var(--dim);letter-spacing:.12em;text-transform:uppercase}
 #hud .c{text-align:center}#hud .r{text-align:right}
 #lives{color:var(--teal);letter-spacing:.06em}
@@ -22,7 +23,7 @@ button{font:inherit;color:inherit;cursor:pointer}
 #map{width:100%;aspect-ratio:1.5;display:block;border-radius:12px;background:#0b1630;touch-action:none;cursor:pointer}
 #keyshelp{display:none;font-size:11px;color:var(--dim);line-height:1.6}
 #keyshelp b{color:var(--ink);font-weight:700}
-#mapcap{font-size:10px;color:var(--dim);letter-spacing:.1em;text-transform:uppercase;text-align:center;margin-top:4px}
+#mapcap{font-size:10px;color:var(--dim);letter-spacing:.1em;text-transform:uppercase;text-align:center;margin-top:4px;margin-bottom:0}
 #pad{flex:none;display:grid;grid-template-columns:repeat(3,54px);grid-template-rows:repeat(3,46px);gap:5px;touch-action:none}
 #pad button{border:1px solid var(--line);background:var(--panel);border-radius:13px;font-size:18px;touch-action:none}
 #pad button:active,#pad button.on{background:#1b2468;border-color:var(--teal)}

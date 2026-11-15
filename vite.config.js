@@ -47,6 +47,13 @@ import {
   planRenderLoopFrame,
   resumeClockAfterHidden,
 } from './src/logic/render-loop-policy.js';
+import {
+  capDevicePixelRatio,
+  createAdaptiveDprState,
+  effectivePixelRatio,
+  syncAdaptiveCap,
+  tickAdaptiveDpr,
+} from './src/logic/adaptive-pixel-ratio.js';
 
 window.__ssBoot = true;
 
@@ -100,9 +107,11 @@ export function startSunslide() {
         qMode,
         useBloom,
         pixelRatio,
+        adaptiveDpr: adaptiveDprState.current,
         stageCss: [stageEl.clientWidth, stageEl.clientHeight],
         canvasBuffer: [glc.width, glc.height],
         composerRT: [composer.renderTarget1.width, composer.renderTarget1.height],
+        info: renderer.info,
       };
     },
     setView,

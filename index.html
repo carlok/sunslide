@@ -90,6 +90,10 @@
         <div class="c"><small id="hud-home-l">Home</small><span id="home" aria-labelledby="hud-home-l">0/15</span></div>
         <div class="r"><small id="hud-lives-l">Lives</small><span id="lives" aria-labelledby="hud-lives-l"></span></div>
       </header>
+      <div id="clearStars" class="clear-stars hide" role="status" aria-live="polite" aria-atomic="true">
+        <span id="starRow" class="star-row" aria-hidden="true"></span>
+        <span id="clearStarMeta" class="clear-star-meta"></span>
+      </div>
       <footer id="status" aria-label="Day phase and hints">
         <span id="chip" role="status" aria-live="polite">DAY</span>
         <span id="hint"></span>
@@ -125,6 +129,7 @@
         </ul>
         <button type="button" class="big" id="go">PLAY</button>
         <p class="keys" id="bestline"></p>
+        <p class="keys hide" id="starline"></p>
         <p class="keys">☰ Menu for credits and full control reference · gamepads supported</p>
       </div>
       <div id="oBlock" class="hide">

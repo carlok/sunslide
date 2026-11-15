@@ -2,6 +2,7 @@ import { initAppMenu } from './menu.js';
 import { initSettingsMenu } from './settings-menu.js';
 import { initMapToggle } from './map-toggle.js';
 import { initFullscreen } from './fullscreen.js';
+import { initClearStars } from './clear-stars.js';
 import { initWinScreen } from './win-screen.js';
 import { migrateLegacyBestScore } from './logic/run-best.js';
 import { store } from './logic/store.js';
@@ -18,6 +19,10 @@ async function boot() {
     const { initDebugOverlay } = await import('./debug-overlay.js');
     initDebugOverlay();
   }
+  const clearStars = initClearStars();
+  window.__ssShowClearStars = (payload) => clearStars.show(payload);
+  window.__ssHideClearStars = () => clearStars.hide();
+  window.__ssRefreshTitleStars = () => clearStars.refreshTitleStars();
   const { startSunslide } = await import('virtual:sunslide-game');
   const winScreen = initWinScreen({
     onPlayAgain: () => window.__sunslide?.startGame(),
@@ -25,5 +30,6 @@ async function boot() {
   });
   window.__ssShowWin = (stats) => winScreen.show(stats);
   startSunslide();
+  clearStars.refreshTitleStars();
 }
 boot();

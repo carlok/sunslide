@@ -28,11 +28,14 @@ function newLevel(){
   const pool=tiles.filter(T=>T.id!==startTile);
   for(let i=0;i<CFG.sunstones;i++){ const T=pool.splice(ri(pool.length),1)[0]; T.dots[ri(N)]=2; }
   dotsLeft=0; initialGreenTarget=0;
+  let bubbleDots=0;
   for(const T of tiles) for(let i=0;i<N;i++){
-    if(T.dots[i]===1) initialGreenTarget++;
+    if(T.dots[i]===1){ initialGreenTarget++; bubbleDots++; }
     if(T.dots[i]) dotsLeft++;
   }
+  sectorPar=computeParMoves(level,tiles,bubbleDots);
   planetGreenCelebrated=false;
+  runMoves=0;
   for(const T of tiles){ T.left=T.dots.reduce((a,v)=>a+(v?1:0),0); if(!T.left){ T.cleared=true; T.clearedAt=-99; } }
   sink=null; sinkTimer=12+Math.random()*6; exitFx=null;
   berry=null; berryTimer=16+Math.random()*10; waypoint=-1; combo=0; comboT=9; boostT=0; deaths=0;
@@ -274,6 +277,13 @@ function update(dt){
   } else if(state==='dying'){
     dyingT-=dt;
     if(dyingT<=0){ lives--; if(lives<=0) gameOver(); else { resetActors(); state='play'; readyT=1.0; invuln=2.5; say('READY',900); } }
+  } else if(state==='clear'){
+    clearT-=dt;
+    if(Math.random()<dt*7){ const d=new THREE.Vector3(Math.random()*2-1,Math.random()*2-1,Math.random()*2-1).normalize().multiplyScalar(1.12); emit(d,30,[PC.gold[0],PC.teal[0],PC.bubble[1]],0.3,0.013,1.1,0.05); }
+    if(clearT<=0){
+      if(typeof window.__ssHideClearStars==='function') window.__ssHideClearStars();
+      level++; newLevel(); state='play'; readyT=1.6; invuln=2; zoomT=1; say('SECTOR '+level,1300);
+    }
   }
   updateCameraTarget(dt);
 }
@@ -294,19 +304,13 @@ function maybeCelebratePlanetGreen(){
 }
 function levelClear(){
   maybeCelebratePlanetGreen();
-  state='win';
-  addScore(1000);
-  if(!deaths) addScore(1000);
-  SFX.clear();
-  const stats={
-    moves:runMoves,
-    timeMs:Math.round(runTimeMs),
-    homes:tiles.filter(isHome).length,
-    greened:ecologyCount(ecologyState),
-    level,
-  };
-  if(typeof window.__ssShowWin==='function') window.__ssShowWin(stats);
-  else say('SECTOR CLEARED +1000'+(deaths?'':' · Flawless +1000'),2400);
+  const stars=starsForMoves(runMoves,sectorPar);
+  recordSectorStars(store,level,stars);
+  if(typeof window.__ssShowClearStars==='function'){
+    window.__ssShowClearStars({ sector: level, moves: runMoves, par: sectorPar, stars });
+  }
+  state='clear'; clearT=2.8; addScore(1000); if(!deaths) addScore(1000);
+  say('SECTOR CLEARED · '+formatStarRow(stars)+' ('+runMoves+' moves, par '+sectorPar+')',2600); SFX.clear();
 }
 function gameOver(){
   state='over';
@@ -325,6 +329,8 @@ function goTitle(){
 function startGame(){
   if(useBloom&&typeof ensurePostPipeline==='function') ensurePostPipeline();
   score=0; lives=3; level=1; nextLife=CFG.lifeEvery; runMoves=0; runTimeMs=0; deaths=0; newLevel();
+  if(typeof window.__ssHideClearStars==='function') window.__ssHideClearStars();
+  if(typeof window.__ssRefreshTitleStars==='function') window.__ssRefreshTitleStars();
   state='play'; readyT=1.6; invuln=2; zoomT=1; perfStart=performance.now();
   $('ov').classList.add('hide'); $('wBlock').classList.add('hide'); say('READY',1200); SFX.start();
 }

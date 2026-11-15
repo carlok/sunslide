@@ -40,6 +40,7 @@ import {
   decorTangentScale,
   cellFootprintTangent,
 } from './src/logic/ecology.js';
+import { createHaptics } from './src/logic/haptics.js';
 import {
   slideSnapProgress,
   slideSnapDurationSeconds,
@@ -74,6 +75,8 @@ import {
   syncAdaptiveCap,
   tickAdaptiveDpr,
 } from './src/logic/adaptive-pixel-ratio.js';
+
+const haptics = createHaptics();
 
 window.__ssBoot = true;
 

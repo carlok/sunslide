@@ -220,6 +220,34 @@ try {
         };
       });
       if (!mapPersist.ok) fail(`${name}: map preference not persisted ${JSON.stringify(mapPersist)}`);
+      const touch = await page.evaluate((min) => {
+        const ids = ['menuBtn', 'go', 'mapToggle', 'bPause', 'bMus', 'bView2'];
+        const out = [];
+        for (const id of ids) {
+          const el = document.getElementById(id);
+          if (!el) continue;
+          if (id === 'mapToggle' && !el.classList.contains('map-toggle-active')) continue;
+          const r = el.getBoundingClientRect();
+          out.push({
+            id,
+            w: r.width,
+            h: r.height,
+            ok: r.width >= min && r.height >= min,
+          });
+        }
+        document.querySelectorAll('#pad button').forEach((el, i) => {
+          const r = el.getBoundingClientRect();
+          out.push({
+            id: el.id || `pad-${i}`,
+            w: r.width,
+            h: r.height,
+            ok: r.width >= min && r.height >= min,
+          });
+        });
+        const bad = out.filter((x) => !x.ok);
+        return { ok: bad.length === 0, bad, out };
+      }, 44);
+      if (!touch.ok) fail(`${name}: touch targets under 44px ${JSON.stringify(touch.bad)}`);
     }
 
     await page.evaluate((q) => window.__sunslide.setQuality(q), quality ?? 1);

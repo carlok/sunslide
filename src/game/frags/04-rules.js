@@ -27,7 +27,12 @@ function newLevel(){
   for(const g of bats) tiles[g.home].dots[1*TW+3]=0;
   const pool=tiles.filter(T=>T.id!==startTile);
   for(let i=0;i<CFG.sunstones;i++){ const T=pool.splice(ri(pool.length),1)[0]; T.dots[ri(N)]=2; }
-  dotsLeft=0; for(const T of tiles) for(let i=0;i<N;i++) if(T.dots[i]) dotsLeft++;
+  dotsLeft=0; initialGreenTarget=0;
+  for(const T of tiles) for(let i=0;i<N;i++){
+    if(T.dots[i]===1) initialGreenTarget++;
+    if(T.dots[i]) dotsLeft++;
+  }
+  planetGreenCelebrated=false;
   for(const T of tiles){ T.left=T.dots.reduce((a,v)=>a+(v?1:0),0); if(!T.left){ T.cleared=true; T.clearedAt=-99; } }
   sink=null; sinkTimer=12+Math.random()*6; exitFx=null;
   berry=null; berryTimer=16+Math.random()*10; waypoint=-1; combo=0; comboT=9; boostT=0; deaths=0;
@@ -53,6 +58,7 @@ function eatAt(t,x,y){
   const mult=isHome(T)?2:1, pos=cellWorld(t,x,y,0.035);
   if(v===1){
     markBubbleCollected(ecologyState,t,x,y,gameClock);
+    maybeCelebratePlanetGreen();
     combo=comboT<CFG.comboWin?combo+1:1; comboT=0;
     haptics.bubbleCollect();
     addScore((10+Math.min(20,(combo-1)*2))*mult); SFX.pop(combo-1); emit(pos,10,PC.bubble,0.2,0.007,0.45,0.25);
@@ -271,7 +277,23 @@ function update(dt){
   }
   updateCameraTarget(dt);
 }
+function maybeCelebratePlanetGreen(){
+  if(planetGreenCelebrated||state!=='play'||initialGreenTarget<=0) return;
+  if(!isPlanetFullyGreen(ecologyCount(ecologyState),initialGreenTarget)) return;
+  planetGreenCelebrated=true;
+  const goalEl=document.getElementById('greenGoal');
+  if(goalEl){ goalEl.classList.add('celebrate'); setTimeout(()=>goalEl.classList.remove('celebrate'),REDUCED?0:1200); }
+  if(REDUCED){ say('The planet is fully green!',2200); SFX.bloom(); return; }
+  say('The planet is fully green!',2600); SFX.bloom(); SFX.clear();
+  const pos=cellWorld(player.t,player.x,player.y,0.05);
+  frameAt(pos.x,pos.y);
+  for(let k=0;k<14;k++){
+    emit(pos,10,PC.petal,0.22,0.01,1.1,0.12,0.6);
+  }
+  shakeT=Math.max(shakeT,0.12);
+}
 function levelClear(){
+  maybeCelebratePlanetGreen();
   state='win';
   addScore(1000);
   if(!deaths) addScore(1000);

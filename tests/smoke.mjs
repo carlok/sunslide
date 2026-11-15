@@ -284,6 +284,39 @@ try {
     await page.waitForTimeout(800);
 
     if (name === 'desktop') {
+      const greenHud = await page.evaluate(() => {
+        const bar = document.getElementById('greenGoal');
+        const pct = document.getElementById('greenPct');
+        if (!bar || !pct) return { ok: false, why: 'green HUD missing' };
+        const before = pct.textContent;
+        const S = window.__sunslide;
+        let popped = false;
+        outer: for (let tid = 0; tid < S.tiles.length; tid++) {
+          const T = S.tiles[tid];
+          for (let y = 0; y < 4; y++) {
+            for (let x = 0; x < 8; x++) {
+              if (T.dots[y * 8 + x] === 1) {
+                S.popBubbleAt(tid, x, y);
+                popped = true;
+                break outer;
+              }
+            }
+          }
+        }
+        for (let i = 0; i < 6; i++) S.update(0.05);
+        S.refreshHud?.();
+        return {
+          ok:
+            popped &&
+            bar.getAttribute('role') === 'progressbar' &&
+            S.planetGreenPercent > 0 &&
+            pct.textContent !== before,
+          before,
+          after: pct.textContent,
+          percent: S.planetGreenPercent,
+        };
+      });
+      if (!greenHud.ok) fail(`desktop: planet green HUD ${JSON.stringify(greenHud)}`);
       const winCheck = await page.evaluate(() => {
         const hook = window.__sunslide?.showWinForTest;
         if (!hook) return { ok: false, why: 'missing showWinForTest' };

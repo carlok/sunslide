@@ -39,6 +39,11 @@ import {
   decorTangentScale,
   cellFootprintTangent,
 } from './src/logic/ecology.js';
+import {
+  planetGreenPercent,
+  isPlanetFullyGreen,
+  formatGreenPercent,
+} from './src/logic/planet-green.js';
 import { formatBestLine, loadStoredRunBest } from './src/logic/run-best.js';
 import {
   settingsFromStore,
@@ -143,6 +148,9 @@ export function startSunslide() {
   window.__sunslide = {
     get state() { return state; },
     update,
+    refreshHud() {
+      if (typeof hud === 'function') hud();
+    },
     startGame,
     goTitle,
     showWinForTest(o = {}) {
@@ -186,6 +194,13 @@ export function startSunslide() {
     get zoom() { return [zoomT, zoomTarget, viewFar]; },
     setQuality(l) { qMode = l; qLevel = l === 'auto' ? 2 : l; applyQuality(); },
     get greenedCount() { return ecologyCount(ecologyState); },
+    get initialGreenTarget() { return initialGreenTarget; },
+    get planetGreenPercent() {
+      return planetGreenPercent(ecologyCount(ecologyState), initialGreenTarget);
+    },
+    get isPlanetFullyGreen() {
+      return isPlanetFullyGreen(ecologyCount(ecologyState), initialGreenTarget);
+    },
     getEcologyLayout() { return cellFootprintTangent(); },
     popBubbleAt(t, x, y) {
       const T = tiles[t];

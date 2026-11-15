@@ -61,6 +61,7 @@
       </div>
       <div id="credits" class="menu-block">
         <p><strong>Sunslide</strong> — hop as Pip the bubble frog on a tiny planet: a sunlit <b>15-puzzle of sliding meadow islands</b>. © <a href="https://github.com/carlok" rel="noopener noreferrer">carlok</a>.</p>
+        <p>Slide the meadow islands (a 15-puzzle) to collect bubbles and turn the planet green.</p>
         <p>Source <a href="https://github.com/carlok/sunslide/blob/main/LICENSE" rel="noopener noreferrer">Apache-2.0</a>. Built with <a href="https://threejs.org/" rel="noopener noreferrer">three.js</a> (MIT) and Vite.</p>
         <p><a href="https://github.com/carlok/sunslide" rel="noopener noreferrer">github.com/carlok/sunslide</a></p>
       </div>
@@ -77,6 +78,11 @@
       <button type="button" id="bMus" aria-label="Toggle music">♪</button>
     </div>
     <aside id="overlay" aria-label="Game HUD">
+      <div id="greenGoal" class="green-goal" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Planet greening">
+        <span class="green-ring" aria-hidden="true"></span>
+        <span class="green-mark" aria-hidden="true">🌿</span>
+        <span id="greenPct" class="green-pct">0%</span>
+      </div>
       <header id="hud" aria-label="Score and lives">
         <div><small id="hud-score-l">Score</small><span id="score" aria-labelledby="hud-score-l">0</span></div>
         <div class="c"><small id="hud-level-l">Sector</small><span id="level" aria-labelledby="hud-level-l">1</span></div>
@@ -106,7 +112,7 @@
     <div id="ov" class="panel" role="dialog" aria-modal="true" aria-labelledby="title-main">
       <div id="tBlock">
         <h1 id="title-main">SUNSLIDE</h1>
-        <p>Pip the bubble frog lives on a tiny planet made of 15 sliding meadow islands.</p>
+        <p>Slide the meadow islands (a 15-puzzle) to collect bubbles and turn the planet green.</p>
         <ul>
           <li><b>Swipe</b>, use the arrows or the pad to hop. Pop bubbles in a row for <b>combos</b>.</li>
           <li><b>Tap an island</b> next to the empty meadow, on the planet or on the map, to slide it. Only sunlit islands move.</li>

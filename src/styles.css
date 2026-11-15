@@ -41,6 +41,14 @@ a{color:var(--teal)}
 #tb{position:absolute;right:calc(8px + env(safe-area-inset-right));top:calc(8px + env(safe-area-inset-top));display:flex;gap:6px;z-index:7;pointer-events:auto}
 #tb button{width:36px;height:32px;min-width:var(--touch-min);min-height:var(--touch-min);border-radius:10px;border:1px solid var(--line);background:rgba(12,17,48,.7);font-size:13px;display:inline-flex;align-items:center;justify-content:center;padding:0;touch-action:manipulation}
 #overlay{position:absolute;right:calc(8px + env(safe-area-inset-right));bottom:calc(8px + env(safe-area-inset-bottom));z-index:5;max-width:min(320px,46vw);display:flex;flex-direction:column;gap:6px;padding:10px 12px;border-radius:14px;border:1px solid rgba(40,49,106,.55);background:rgba(4,5,13,.42);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);text-shadow:0 1px 8px rgba(0,0,0,.85);pointer-events:none}
+.green-goal{display:flex;align-items:center;gap:6px;align-self:flex-start;font-size:11px;font-weight:800;color:#9bd14a;letter-spacing:.04em;--green-pct:0}
+.green-ring{flex:none;width:20px;height:20px;border-radius:50%;background:conic-gradient(#6ecf5a calc(var(--green-pct)*1%),rgba(36,48,72,.85) 0);position:relative}
+.green-ring::after{content:'';position:absolute;inset:3px;border-radius:50%;background:rgba(4,5,13,.55)}
+.green-mark{flex:none;font-size:13px;line-height:1;filter:drop-shadow(0 0 4px rgba(80,200,90,.35))}
+.green-pct{flex:none;font-variant-numeric:tabular-nums;color:var(--ink);min-width:2.5em}
+.green-goal.celebrate .green-ring{animation:green-pulse .9s ease-out 1}
+@keyframes green-pulse{50%{box-shadow:0 0 10px rgba(110,207,90,.65);transform:scale(1.08)}}
+@media (prefers-reduced-motion:reduce){.green-goal.celebrate .green-ring{animation:none}}
 #overlay > *{pointer-events:auto}
 /* Title / pause modals sit above the HUD; never let the dock steal taps on PLAY. */
 #stage:has(#ov:not(.hide)) #overlay,

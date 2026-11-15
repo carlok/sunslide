@@ -148,7 +148,7 @@ function updateCameraTarget(dt){
   else {
     const w=actorWorld(player), k=Math.min(1,dt*(state==='warp'?(REDUCED?3:4):(REDUCED?3:5)));
     camLon=mod(camLon+angD(gx2lon(w[0])-camLon)*k,TAU); camLat+=(gy2lat(w[1])-camLat)*k;
-    zoomTarget=state==='clear'?1:(viewFar?1:(state==='play'&&readyT>1.0?1:(state==='warp'&&warpT>0.25&&warpT<1.25?1:0)));
+    zoomTarget=state==='win'?1:(viewFar?1:(state==='play'&&readyT>1.0?1:(state==='warp'&&warpT>0.25&&warpT<1.25?1:0)));
   }
   zoomT+=(zoomTarget-zoomT)*Math.min(1,dt*(REDUCED?6:(state==='warp'?4.5:2.4)));
 }

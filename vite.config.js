@@ -2,7 +2,6 @@ import { defineConfig } from 'vite';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const fragOrder = JSON.parse(
   readFileSync(path.join(__dirname, 'src/game/frag-order.json'), 'utf8'),
@@ -40,6 +39,7 @@ import {
   decorTangentScale,
   cellFootprintTangent,
 } from './src/logic/ecology.js';
+import { formatBestLine, loadStoredRunBest } from './src/logic/run-best.js';
 import {
   settingsFromStore,
   resolveReducedMotion,
@@ -139,11 +139,28 @@ export function startSunslide() {
   applyQuality();
   schedulePostPipelineLoad();
   const bestEl = document.getElementById('bestline');
-  if (bestEl) bestEl.textContent = best ? 'Best: ' + best : '';
+  if (bestEl) bestEl.textContent = formatBestLine(loadStoredRunBest(store));
   window.__sunslide = {
     get state() { return state; },
     update,
     startGame,
+    goTitle,
+    showWinForTest(o = {}) {
+      state = 'win';
+      const stats = {
+        moves: o.moves ?? runMoves,
+        timeMs: o.timeMs ?? Math.round(runTimeMs),
+        homes: o.homes ?? tiles.filter(isHome).length,
+        greened: o.greened ?? ecologyCount(ecologyState),
+        level: o.level ?? level,
+      };
+      if (typeof window.__ssShowWin === 'function') window.__ssShowWin(stats);
+      const wBlock = document.getElementById('wBlock');
+      return {
+        state,
+        dialogOpen: !!(wBlock && !wBlock.classList.contains('hide')),
+      };
+    },
     trySlide,
     get bats() { return bats; },
     get player() { return player; },

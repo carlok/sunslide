@@ -48,6 +48,22 @@ import {
   atlasRectForTile,
   mapUvToAtlas,
 } from './src/logic/floor-atlas.js';
+import {
+  resolveShadowSettings,
+  SHADOW_FRUSTUM,
+  shouldUpdateShadowMap,
+} from './src/logic/shadows-policy.js';
+import {
+  planRenderLoopFrame,
+  resumeClockAfterHidden,
+} from './src/logic/render-loop-policy.js';
+import {
+  capDevicePixelRatio,
+  createAdaptiveDprState,
+  effectivePixelRatio,
+  syncAdaptiveCap,
+  tickAdaptiveDpr,
+} from './src/logic/adaptive-pixel-ratio.js';
 
 window.__ssBoot = true;
 
@@ -102,9 +118,11 @@ export function startSunslide() {
         useBloom,
         pixelRatio,
         drawCalls: lastFrameDrawCalls,
+        adaptiveDpr: adaptiveDprState.current,
         stageCss: [stageEl.clientWidth, stageEl.clientHeight],
         canvasBuffer: [glc.width, glc.height],
         composerRT: [composer.renderTarget1.width, composer.renderTarget1.height],
+        info: renderer.info,
       };
     },
     setView,
@@ -115,7 +133,7 @@ export function startSunslide() {
     renderInfo() { return renderer.info; },
     sampleDrawCalls() { render(); return lastFrameDrawCalls; },
   };
-  requestAnimationFrame(frame);
+  wakeRenderLoop();
 }
 `;
     },

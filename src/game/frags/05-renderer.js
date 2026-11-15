@@ -3,7 +3,7 @@ let renderer;
 try{ renderer=new THREE.WebGLRenderer({canvas:glc,antialias:true,powerPreference:'high-performance'}); }
 catch(e){ window.__ssFail('This browser has no WebGL, which Sunslide needs.'); throw e; }
 renderer.toneMapping=THREE.ACESFilmicToneMapping; renderer.toneMappingExposure=1.1;
-renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap; renderer.shadowMap.autoUpdate=false;
 const MAXANI=Math.min(8,renderer.capabilities.getMaxAnisotropy());
 glc.addEventListener('webglcontextlost',e=>{ e.preventDefault(); if(state==='play') setPaused(true); say('Graphics reset by the browser — lowering quality',2500); });
 glc.addEventListener('webglcontextrestored',()=>{ qMode=Math.max(0,qLevel-1); qLevel=qMode; store.set('quality',qMode); location.reload(); });
@@ -42,11 +42,11 @@ composer.addPass(bloom); composer.addPass(new OutputPass());
 
 /* ---------- lights ---------- */
 const sunL=new THREE.DirectionalLight('#fff0d9',3.3);
-sunL.castShadow=true; sunL.shadow.mapSize.set(2048,2048);
-{ const c=sunL.shadow.camera; c.left=-1.12;c.right=1.12;c.top=1.12;c.bottom=-1.12;c.near=3.6;c.far=6.5;c.updateProjectionMatrix(); }
+sunL.castShadow=true; sunL.shadow.mapSize.set(1024,1024);
+{ const c=sunL.shadow.camera; c.left=SHADOW_FRUSTUM.left;c.right=SHADOW_FRUSTUM.right;c.top=SHADOW_FRUSTUM.top;c.bottom=SHADOW_FRUSTUM.bottom;c.near=SHADOW_FRUSTUM.near;c.far=SHADOW_FRUSTUM.far;c.updateProjectionMatrix(); }
 sunL.shadow.bias=-0.0005; sunL.shadow.normalBias=0.004;
 scene.add(sunL,sunL.target);
-const moonL=new THREE.DirectionalLight('#8aa0ff',0.75); scene.add(moonL,moonL.target);
+const moonL=new THREE.DirectionalLight('#8aa0ff',0.75); moonL.castShadow=false; scene.add(moonL,moonL.target);
 const ambL=new THREE.AmbientLight('#7080c0',0.55); scene.add(ambL);
 
 /* ---------- sky: stars, sun, moon, atmosphere ---------- */

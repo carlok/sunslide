@@ -293,14 +293,14 @@ function ensureTileBatches(){
   const wallMat=wireBatchSphereMat(new THREE.MeshStandardMaterial({vertexColors:true,roughness:0.82,emissive:'#000'}),'wall');
   const lampMat=wireBatchSphereMat(new THREE.MeshStandardMaterial({color:'#fff3cf',emissive:'#ffb24a',emissiveIntensity:1,roughness:0.3}),'lamp');
   const slabMat=wireBatchSphereMat(new THREE.MeshStandardMaterial({vertexColors:true,roughness:1,shadowSide:THREE.DoubleSide}),'slab');
-  const depthMat=wireBatchSphereMat(new THREE.MeshDepthMaterial({depthPacking:THREE.RGBADepthPacking}),'slab');
-  floorMat.customDepthMaterial=wallMat.customDepthMaterial=slabMat.customDepthMaterial=depthMat;
+  wallMat.customDepthMaterial=wireBatchSphereMat(new THREE.MeshDepthMaterial({depthPacking:THREE.RGBADepthPacking}),'wall');
+  slabMat.customDepthMaterial=wireBatchSphereMat(new THREE.MeshDepthMaterial({depthPacking:THREE.RGBADepthPacking}),'slab');
   floorBatch=new THREE.BatchedMesh(NT,pools.floor.v,pools.floor.i,floorMat);
   wallBatch=new THREE.BatchedMesh(NT,pools.walls.v,pools.walls.i,wallMat);
   lampBatch=new THREE.BatchedMesh(NT,pools.lamps.v,pools.lamps.i,lampMat);
   slabBatch=new THREE.BatchedMesh(NT,pools.slab.v,pools.slab.i,slabMat);
   for(const b of [floorBatch,wallBatch,lampBatch,slabBatch]){ b.frustumCulled=false; b.receiveShadow=true; scene.add(b); }
-  // Sphere-mapped BatchedMesh + customDepthMaterial casts bogus planet-scale shadows (r160 shadow pass).
+  // BatchedMesh + sphere-mapped customDepthMaterial still casts planet-spanning slim streaks (r160).
   floorBatch.castShadow=false; wallBatch.castShadow=false; slabBatch.castShadow=false; lampBatch.castShadow=false;
 }
 function syncTileBatchUniforms(){

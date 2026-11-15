@@ -138,6 +138,10 @@ try {
     });
   // 'load' only — networkidle can hang on WebGL / rAF; gameplay readiness uses __sunslide.
     await page.goto(baseUrl, { waitUntil: 'load', timeout: 60_000 });
+    const debugLeak = await page.evaluate(
+      () => !!document.getElementById('debugOverlay'),
+    );
+    if (debugLeak) fail(`${name}: debug overlay must not load without ?debug`);
     await page.waitForFunction(() => !!window.__sunslide, null, { timeout: 30_000 });
 
     const menu = await page.evaluate(async () => {
@@ -329,6 +333,13 @@ try {
     if (layout.overflowX || layout.overflowY) fail(`${name}: page overflows the viewport`);
 
     if (large) {
+      await page.waitForFunction(
+        () => {
+          const m = window.__sunslide?.getRenderMetrics?.();
+          return m && (!m.useBloom || m.postPipelineReady);
+        },
+        { timeout: 20_000 },
+      );
       await page.evaluate(() => {
         const S = window.__sunslide;
         for (let i = 0; i < 150; i++) S.update(1 / 60);

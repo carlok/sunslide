@@ -10,6 +10,7 @@ let aligned=false, startTile=0;
 let player=null, bats=[];
 let viewFar=store.get('viewFar',false), zoomT=1, zoomTarget=1, camLat=0.3, camLon=0;
 let ecologyState=null;
+let slidePreview=null;
 
 /* ---------- maze islands ---------- */
 function makeTile(id){
@@ -41,10 +42,21 @@ function holeNeighbors(){
 }
 function slideInstant(c,r){ const h=findHole(), id=slotGrid[r][c]; slotGrid[h.r][h.c]=id; slotGrid[r][c]=-1; tiles[id].slot={c:h.c,r:h.r}; }
 function tilePos(T){
-  const a=T.anim; if(!a) return {x:T.slot.c*TW,y:T.slot.r*TH};
-  const e=smooth(a.t); return {x:(a.fc+a.dc*e)*TW, y:(a.fr+a.dr*e)*TH};
+  const a=T.anim;
+  if(!a){
+    if(slidePreview&&slidePreview.id===T.id){
+      return ghostTilePosition(slidePreview.fc,slidePreview.fr,slidePreview.dc,slidePreview.dr,slidePreview.pull,REDUCED);
+    }
+    return {x:T.slot.c*TW,y:T.slot.r*TH};
+  }
+  const e=slideSnapProgress(a.t,REDUCED);
+  return {x:(a.fc+a.dc*e)*TW, y:(a.fr+a.dr*e)*TH};
 }
-const liftOf=T=>T.anim?Math.sin(Math.PI*T.anim.t)*LIFT:0;
+const liftOf=T=>{
+  if(T.anim) return slideLiftAtProgress(T.anim.t,REDUCED)*LIFT;
+  if(slidePreview&&slidePreview.id===T.id) return ghostPreviewBlend(slidePreview.pull,REDUCED)*LIFT*0.35;
+  return 0;
+};
 
 /* ---------- movement graph ---------- */
 function nbrLocal(t,x,y,d){

@@ -22,7 +22,7 @@ export function initAppMenu() {
     scrim.classList.remove('hide');
     document.addEventListener('keydown', onKey, true);
     document.addEventListener('pointerdown', onOutside, true);
-    const first = panel.querySelector('a, button, [href]');
+    const first = panel.querySelector('input, select, button, a, [href]');
     if (first && typeof first.focus === 'function') first.focus();
     else panel.focus();
   };

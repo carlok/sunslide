@@ -1,5 +1,5 @@
 import { TW, TH, COLS, ROWS, DX, DY, LIFT } from './constants.js';
-import { smooth } from './helpers.js';
+import { slideLiftAtProgress, slideSnapProgress } from './slide-feel.js';
 
 export const isHome = (T) =>
   !T.anim && T.slot.c === T.id % COLS && T.slot.r === ((T.id / COLS) | 0);
@@ -29,14 +29,15 @@ export function slideInstant(slotGrid, tiles, c, r) {
   tiles[id].slot = { c: h.c, r: h.r };
 }
 
-export function tilePos(T) {
+export function tilePos(T, reducedMotion = false) {
   const a = T.anim;
   if (!a) return { x: T.slot.c * TW, y: T.slot.r * TH };
-  const e = smooth(a.t);
+  const e = slideSnapProgress(a.t, reducedMotion);
   return { x: (a.fc + a.dc * e) * TW, y: (a.fr + a.dr * e) * TH };
 }
 
-export const liftOf = (T) => (T.anim ? Math.sin(Math.PI * T.anim.t) * LIFT : 0);
+export const liftOf = (T, reducedMotion = false) =>
+  T.anim ? slideLiftAtProgress(T.anim.t, reducedMotion) * LIFT : 0;
 
 export function slotDist(a, b) {
   const dc = Math.abs(a.c - b.c);

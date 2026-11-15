@@ -24,10 +24,7 @@ function sunslideGamePlugin() {
       return `
 import * as THREE from 'three';
 import { CAMERA, closeCameraOffset, farOrbitDistance } from './src/logic/camera.js';
-import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
-import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
-import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
-import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { createPostPipeline } from './src/game/lazy-post.js';
 
 import {
   createEcologyState,
@@ -43,14 +40,104 @@ import {
   cellFootprintTangent,
 } from './src/logic/ecology.js';
 import { formatBestLine, loadStoredRunBest } from './src/logic/run-best.js';
+import {
+  settingsFromStore,
+  resolveReducedMotion,
+} from './src/logic/settings.js';
+import { createStore } from './src/logic/store.js';
+import { createHaptics } from './src/logic/haptics.js';
+import {
+  PALETTE_COLOR_BLIND,
+  PALETTE_STANDARD,
+  highlightTheme,
+} from './src/logic/visual-theme.js';
+import {
+  slideSnapProgress,
+  slideSnapDurationSeconds,
+  slideLiftAtProgress,
+  ghostPreviewBlend,
+  ghostTilePosition,
+  ghostEmissiveIntensity,
+  movableHighlightIntensity,
+  slideDeltaToHole,
+  isMovableSlot,
+  screenDragPull,
+} from './src/logic/slide-feel.js';
+import { FLOOR_CANVAS, MEADOW_CANVAS } from './src/logic/texture-budget.js';
+import {
+  atlasGridForCount,
+  atlasRectForTile,
+  mapUvToAtlas,
+} from './src/logic/floor-atlas.js';
+import {
+  resolveShadowSettings,
+  SHADOW_FRUSTUM,
+  shouldUpdateShadowMap,
+} from './src/logic/shadows-policy.js';
+import {
+  planRenderLoopFrame,
+  resumeClockAfterHidden,
+} from './src/logic/render-loop-policy.js';
+import {
+  capDevicePixelRatio,
+  createAdaptiveDprState,
+  effectivePixelRatio,
+  syncAdaptiveCap,
+  tickAdaptiveDpr,
+} from './src/logic/adaptive-pixel-ratio.js';
+
+const settingsStore = createStore();
+const haptics = createHaptics();
+let mapEligLitPrefix = 'rgba(255,210,94,';
+let mapEligDarkStroke = 'rgba(127,140,255,0.85)';
+
+function applyColorBlindPalette(cb) {
+  const src = cb ? PALETTE_COLOR_BLIND : PALETTE_STANDARD;
+  for (let i = 0; i < NT; i++) PALETTE[i] = src[i];
+  applyRendererTheme(cb);
+  const t = highlightTheme(!!cb);
+  mapEligLitPrefix = t.mapEligLit;
+  mapEligDarkStroke = cb ? 'rgba(94,176,255,0.9)' : 'rgba(127,140,255,0.85)';
+  if (tiles?.length) refreshTiles();
+}
+
+function applySettings(s) {
+  if (s.sound !== undefined) setMuted(!s.sound);
+  if (s.music !== undefined) setMusic(!!s.music);
+  if (s.haptics !== undefined) haptics.setEnabled(!!s.haptics);
+  if (s.reducedMotion !== undefined) applyReducedFromSettings(s.reducedMotion);
+  if (s.quality !== undefined) {
+    qMode = s.quality;
+    qLevel = s.quality === 'auto' ? 2 : s.quality;
+    perfStart = performance.now();
+    applyQuality();
+  }
+  if (s.colorBlind !== undefined) applyColorBlindPalette(s.colorBlind);
+  syncButtons();
+}
 
 window.__ssBoot = true;
+
+let composer=null, postPipelinePromise=null;
+function ensurePostPipeline(){
+  if(composer) return postPipelinePromise||Promise.resolve(composer);
+  postPipelinePromise=createPostPipeline(renderer,scene,camera).then((p)=>{ composer=p.composer; if(typeof resize==='function') resize(); return composer; });
+  return postPipelinePromise;
+}
+function schedulePostPipelineLoad(){
+  if(!useBloom||composer) return;
+  const run=()=>ensurePostPipeline().catch(()=>{});
+  if(typeof requestIdleCallback==='function') requestIdleCallback(run,{timeout:2500});
+  else setTimeout(run,400);
+}
 
 ${frags}
 
 export function startSunslide() {
+  applySettings(settingsFromStore(settingsStore));
   newLevel();
   applyQuality();
+  schedulePostPipelineLoad();
   const bestEl = document.getElementById('bestline');
   if (bestEl) bestEl.textContent = formatBestLine(loadStoredRunBest(store));
   window.__sunslide = {
@@ -113,9 +200,13 @@ export function startSunslide() {
         qMode,
         useBloom,
         pixelRatio,
+        drawCalls: lastFrameDrawCalls,
+        adaptiveDpr: adaptiveDprState.current,
         stageCss: [stageEl.clientWidth, stageEl.clientHeight],
         canvasBuffer: [glc.width, glc.height],
-        composerRT: [composer.renderTarget1.width, composer.renderTarget1.height],
+        composerRT: composer ? [composer.renderTarget1.width, composer.renderTarget1.height] : null,
+        postPipelineReady: !!composer,
+        info: renderer.info,
       };
     },
     setView,
@@ -124,8 +215,12 @@ export function startSunslide() {
     isHome,
     lightSlot,
     renderInfo() { return renderer.info; },
+    applySettings,
+    get settings() { return settingsFromStore(settingsStore); },
+    haptics,
+    sampleDrawCalls() { render(); return lastFrameDrawCalls; },
   };
-  requestAnimationFrame(frame);
+  wakeRenderLoop();
 }
 `;
     },
@@ -139,6 +234,7 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id) {
+          if (id.includes('postprocessing')) return 'three-post';
           if (id.includes('node_modules/three')) return 'three';
         },
       },

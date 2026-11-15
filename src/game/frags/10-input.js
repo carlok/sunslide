@@ -15,6 +15,7 @@ const KEYS={ArrowUp:0,KeyW:0,ArrowRight:1,KeyD:1,ArrowDown:2,KeyS:2,ArrowLeft:3,
 addEventListener('keydown',e=>{
   if(KEYS[e.code]!==undefined){ e.preventDefault(); if(state==='title'){ startGame(); return; } if(!paused) want=KEYS[e.code]; return; }
   if(e.code==='Space'){ e.preventDefault(); setView(!viewFar); }
+  else if(state==='win'){ /* win overlay handles Esc / Enter */ }
   else if(e.code==='KeyP'||e.code==='Escape'){ setPaused(!paused); }
   else if(e.code==='KeyM'){ setMusic(!MUS.on); }
   else if(e.code==='Enter'&&(state==='title'||state==='over')) startGame();
@@ -58,7 +59,7 @@ mapC.addEventListener('pointerdown',e=>{
   waypoint=id; say('Waypoint: island '+T.num+' — follow the pink arrow',1500); SFX.tick();
 });
 $('go').addEventListener('click',startGame);
-$('again').addEventListener('click',()=>{ $('oBlock').classList.add('hide'); $('tBlock').classList.remove('hide'); startGame(); });
+$('again').addEventListener('click',()=>{ $('oBlock').classList.add('hide'); $('wBlock').classList.add('hide'); $('tBlock').classList.remove('hide'); startGame(); });
 $('bPause').addEventListener('click',()=>setPaused(!paused));
 $('bMus').addEventListener('click',()=>setMusic(!MUS.on));
 $('mBtn').addEventListener('click',()=>setMusic(!MUS.on));

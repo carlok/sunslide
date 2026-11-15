@@ -228,6 +228,42 @@ try {
     await page.click('#go', { timeout: 15_000, noWaitAfter: true });
     await page.waitForTimeout(800);
 
+    if (name === 'desktop') {
+      const winCheck = await page.evaluate(() => {
+        const hook = window.__sunslide?.showWinForTest;
+        if (!hook) return { ok: false, why: 'missing showWinForTest' };
+        const r = hook({ moves: 7, timeMs: 9100, homes: 9, greened: 4 });
+        const wBlock = document.getElementById('wBlock');
+        const again = document.getElementById('winAgain');
+        const menu = document.getElementById('winMenu');
+        const announce = document.getElementById('winAnnounce');
+        const ar = again?.getBoundingClientRect();
+        const mr = menu?.getBoundingClientRect();
+        return {
+          ok:
+            r.dialogOpen &&
+            wBlock?.getAttribute('role') === 'dialog' &&
+            document.getElementById('winMoves')?.textContent === '7' &&
+            (announce?.textContent?.includes('Sector clear') ?? false) &&
+            ar &&
+            Math.min(ar.width, ar.height) >= 44 &&
+            mr &&
+            Math.min(mr.width, mr.height) >= 44,
+          r,
+          announce: announce?.textContent,
+        };
+      });
+      if (!winCheck.ok) fail(`desktop: win screen ${JSON.stringify(winCheck)}`);
+      await page.click('#winMenu');
+      await page.waitForFunction(
+        () =>
+          document.getElementById('tBlock') &&
+          !document.getElementById('tBlock').classList.contains('hide'),
+      );
+      await page.click('#go');
+      await page.waitForTimeout(400);
+    }
+
     const simTicks = large ? Math.min(SIM_TICKS, 2800) : SIM_TICKS;
     const res = await page.evaluate(
       ({ ticks }) => {

@@ -1,6 +1,7 @@
 let state='title', paused=false;
 let tiles=[], slotGrid=[];
-let score=0, lives=3, level=1, dotsLeft=0, best=store.get('best',0), nextLife=CFG.lifeEvery;
+let score=0, lives=3, level=1, dotsLeft=0, scoreBest=store.get('scoreBest',0), nextLife=CFG.lifeEvery;
+let runMoves=0, runTimeMs=0;
 let sunLon=0, gameClock=0;
 let sink=null, sinkTimer=14, warpT=0, warpDest=null, warped=false, exitFx=null;
 let combo=0, comboT=9, berry=null, berryTimer=25, boostT=0, waypoint=-1, shakeT=0, deaths=0;

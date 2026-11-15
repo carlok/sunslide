@@ -56,6 +56,15 @@ a{color:var(--teal)}
 .panel li{margin:4px 0}
 .panel .keys{font-size:11px;color:var(--dim)}
 .big{margin-top:8px;padding:11px 32px;font-size:16px;font-weight:800;letter-spacing:.1em;border-radius:99px;border:0;background:linear-gradient(#ffd25e,#ff9a3c);color:#2a1300}
+.touch-target{min-height:44px;min-width:44px;touch-action:manipulation}
+.big.ghost{background:var(--panel);border:1px solid var(--line);color:var(--ink)}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.win-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px 16px;margin:12px auto 8px;max-width:320px;font-variant-numeric:tabular-nums}
+.win-stats dt{font-size:10px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);margin:0}
+.win-stats dd{margin:2px 0 0;font-size:22px;font-weight:800;color:var(--ink)}
+.win-new-best{margin:6px 0;font-size:15px;font-weight:800;color:var(--teal);letter-spacing:.06em}
+.win-actions{display:flex;flex-direction:column;align-items:center;gap:10px;margin-top:10px;width:100%;max-width:280px}
+.win-actions .big{width:100%;margin-top:0}
 .row{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:10px}
 .sm{padding:8px 14px;border-radius:99px;border:1px solid var(--line);background:var(--panel);font-size:13px;font-weight:600}
 @media (max-width:480px),(max-height:700px) and (orientation:portrait){

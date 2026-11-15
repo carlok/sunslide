@@ -101,6 +101,22 @@
         <p id="res"></p>
         <button type="button" class="big" id="again">AGAIN</button>
       </div>
+      <div id="wBlock" class="hide" role="dialog" aria-modal="true" aria-labelledby="title-win" tabindex="-1">
+        <h1 id="title-win">SECTOR CLEAR</h1>
+        <p id="winAnnounce" class="sr-only" aria-live="polite" aria-atomic="true"></p>
+        <dl class="win-stats" aria-label="Run summary">
+          <div><dt>Moves</dt><dd id="winMoves">0</dd></div>
+          <div><dt>Time</dt><dd id="winTime">0s</dd></div>
+          <div><dt>Tiles greened</dt><dd id="winGreen">0</dd></div>
+          <div><dt>Islands home</dt><dd id="winHome">0/15</dd></div>
+        </dl>
+        <p id="winBest" class="win-new-best hide" role="status">New best!</p>
+        <p id="winPrevBest" class="keys hide"></p>
+        <div class="win-actions">
+          <button type="button" class="big touch-target" id="winAgain">Play again</button>
+          <button type="button" class="big touch-target ghost" id="winMenu">Menu</button>
+        </div>
+      </div>
     </div>
     <div id="pause" class="panel hide" role="dialog" aria-modal="true" aria-labelledby="title-pause">
       <h1 id="title-pause">PAUSED</h1>

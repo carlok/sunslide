@@ -221,6 +221,7 @@ function trySlide(c,r){
   let dc=h.c-c; if(dc>2) dc-=COLS; if(dc<-2) dc+=COLS;
   T.anim={t:0,fc:c,fr:r,dc,dr:h.r-r};
   slotGrid[h.r][h.c]=id; slotGrid[r][c]=-1; T.slot={c:h.c,r:h.r};
+  runMoves++;
   SFX.slide(); refreshTiles();
   return '';
 }
@@ -237,6 +238,7 @@ function onSlideEnd(T){
 }
 function update(dt){
   gameClock+=dt;
+  if(state==='play'||state==='warp'||state==='dying') runTimeMs+=dt*1000;
   sunLon=mod(sunLon-dt*TAU/dayLen(),TAU);
   shakeT=Math.max(0,shakeT-dt);
   cooldown=Math.max(0,cooldown-dt);
@@ -260,22 +262,40 @@ function update(dt){
   } else if(state==='dying'){
     dyingT-=dt;
     if(dyingT<=0){ lives--; if(lives<=0) gameOver(); else { resetActors(); state='play'; readyT=1.0; invuln=2.5; say('READY',900); } }
-  } else if(state==='clear'){
-    clearT-=dt;
-    if(Math.random()<dt*7){ const d=new THREE.Vector3(Math.random()*2-1,Math.random()*2-1,Math.random()*2-1).normalize().multiplyScalar(1.12); emit(d,30,[PC.gold[0],PC.teal[0],PC.bubble[1]],0.3,0.013,1.1,0.05); }
-    if(clearT<=0){ level++; newLevel(); state='play'; readyT=1.6; invuln=2; zoomT=1; say('SECTOR '+level,1300); }
   }
   updateCameraTarget(dt);
 }
-function levelClear(){ state='clear'; clearT=2.8; addScore(1000); if(!deaths) addScore(1000); say('SECTOR CLEARED +1000'+(deaths?'':' · Flawless +1000'),2400); SFX.clear(); }
+function levelClear(){
+  state='win';
+  addScore(1000);
+  if(!deaths) addScore(1000);
+  SFX.clear();
+  const stats={
+    moves:runMoves,
+    timeMs:Math.round(runTimeMs),
+    homes:tiles.filter(isHome).length,
+    greened:ecologyCount(ecologyState),
+    level,
+  };
+  if(typeof window.__ssShowWin==='function') window.__ssShowWin(stats);
+  else say('SECTOR CLEARED +1000'+(deaths?'':' · Flawless +1000'),2400);
+}
 function gameOver(){
   state='over';
-  if(score>best){ best=score; store.set('best',best); }
-  $('res').innerHTML='Score <b>'+score+'</b> &middot; Sector <b>'+level+'</b><br>Best <b>'+best+'</b>';
-  $('tBlock').classList.add('hide'); $('oBlock').classList.remove('hide'); $('ov').classList.remove('hide');
+  if(score>scoreBest){ scoreBest=score; store.set('scoreBest',scoreBest); }
+  $('res').innerHTML='Score <b>'+score+'</b> &middot; Sector <b>'+level+'</b><br>Best score <b>'+scoreBest+'</b>';
+  $('tBlock').classList.add('hide'); $('oBlock').classList.remove('hide'); $('wBlock').classList.add('hide'); $('ov').classList.remove('hide');
+}
+function goTitle(){
+  state='title'; paused=false;
+  $('ov').classList.remove('hide');
+  $('tBlock').classList.remove('hide');
+  $('oBlock').classList.add('hide');
+  $('wBlock').classList.add('hide');
+  $('pause').classList.add('hide');
 }
 function startGame(){
-  score=0; lives=3; level=1; nextLife=CFG.lifeEvery; newLevel();
+  score=0; lives=3; level=1; nextLife=CFG.lifeEvery; runMoves=0; runTimeMs=0; deaths=0; newLevel();
   state='play'; readyT=1.6; invuln=2; zoomT=1; perfStart=performance.now();
-  $('ov').classList.add('hide'); say('READY',1200); SFX.start();
+  $('ov').classList.add('hide'); $('wBlock').classList.add('hide'); say('READY',1200); SFX.start();
 }

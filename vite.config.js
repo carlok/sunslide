@@ -39,6 +39,8 @@ import {
   decorTangentScale,
   cellFootprintTangent,
 } from './src/logic/ecology.js';
+import { createAmbientController } from './src/ambient-audio.js';
+import { ambientLayerGains } from './src/logic/ambient-green.js';
 import {
   computeParMoves,
   starsForMoves,
@@ -144,6 +146,29 @@ function schedulePostPipelineLoad(){
 
 ${frags}
 
+let AMB=null;
+function initAmbAudio(){
+  if(AMB||!AUD.ac) return;
+  AMB=createAmbientController(AUD,{pluck:(b,m,t,v)=>INS.pluck(b,m,t,v),hash,seed:MUS.seed});
+  AMB.setMusicOn(MUS.on);
+}
+function setAmbientGreenPercent(p){
+  initAmbAudio();
+  AMB?.ensureNodes();
+  AMB?.setPercent(p);
+}
+function syncAmbientMusic(){
+  initAmbAudio();
+  AMB?.setMusicOn(MUS.on);
+}
+function currentGreenPercent(){
+  return planetGreenPercent(ecologyCount(ecologyState),initialGreenTarget);
+}
+function syncAmbientGreen(){
+  if(state==='play'||state==='warp'||state==='clear')
+    setAmbientGreenPercent(currentGreenPercent());
+}
+
 export function startSunslide() {
   applySettings(settingsFromStore(settingsStore));
   newLevel();
@@ -216,6 +241,7 @@ export function startSunslide() {
     get zoom() { return [zoomT, zoomTarget, viewFar]; },
     setQuality(l) { qMode = l; qLevel = l === 'auto' ? 2 : l; applyQuality(); },
     get greenedCount() { return ecologyCount(ecologyState); },
+    get greenProgress() { return currentGreenPercent(); },
     get initialGreenTarget() { return initialGreenTarget; },
     get planetGreenPercent() {
       return planetGreenPercent(ecologyCount(ecologyState), initialGreenTarget);
@@ -223,6 +249,8 @@ export function startSunslide() {
     get isPlanetFullyGreen() {
       return isPlanetFullyGreen(ecologyCount(ecologyState), initialGreenTarget);
     },
+    setAmbientGreenPercent(p) { setAmbientGreenPercent(p); },
+    getAmbientLayerGains(p) { return ambientLayerGains(p); },
     getEcologyLayout() { return cellFootprintTangent(); },
     popBubbleAt(t, x, y) {
       const T = tiles[t];

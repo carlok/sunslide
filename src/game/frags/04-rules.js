@@ -61,6 +61,7 @@ function eatAt(t,x,y){
   const mult=isHome(T)?2:1, pos=cellWorld(t,x,y,0.035);
   if(v===1){
     markBubbleCollected(ecologyState,t,x,y,gameClock);
+    if(typeof syncAmbientGreen==='function') syncAmbientGreen();
     maybeCelebratePlanetGreen();
     combo=comboT<CFG.comboWin?combo+1:1; comboT=0;
     haptics.bubbleCollect();
@@ -333,4 +334,5 @@ function startGame(){
   if(typeof window.__ssRefreshTitleStars==='function') window.__ssRefreshTitleStars();
   state='play'; readyT=1.6; invuln=2; zoomT=1; perfStart=performance.now();
   $('ov').classList.add('hide'); $('wBlock').classList.add('hide'); say('READY',1200); SFX.start();
+  if(typeof syncAmbientGreen==='function') syncAmbientGreen();
 }

@@ -6,7 +6,7 @@ function setPaused(p){
 }
 function setView(far){ viewFar=far; store.set('viewFar',far); syncButtons(); }
 function setMuted(m){ AU.muted=m; store.set('muted',m); if(AUD.ac) AUD.sfx.gain.value=m?0:1; syncButtons(); }
-function setMusic(on){ MUS.on=on; store.set('music',on); audio(); if(AUD.ac){ AUD.mus.gain.value=on?0.6:0; MUS.next=0; } syncButtons(); }
+function setMusic(on){ MUS.on=on; store.set('music',on); audio(); if(AUD.ac){ AUD.mus.gain.value=on?0.6:0; MUS.next=0; } if(typeof syncAmbientMusic==='function') syncAmbientMusic(); syncButtons(); }
 function syncButtons(){
   $('bMus').textContent=MUS.on?'♪':'×'; $('sBtn').textContent='Sound: '+(AU.muted?'Off':'On'); $('mBtn').textContent='Music: '+(MUS.on?'On':'Off');
   $('vBtn').textContent='View: '+(viewFar?'Planet':'Close'); $('bView').classList.toggle('on',viewFar); $('bView2').textContent=viewFar?'◉':'◎';
@@ -98,14 +98,25 @@ $('again').addEventListener('click',()=>{ $('oBlock').classList.add('hide'); $('
 $('bPause').addEventListener('click',()=>setPaused(!paused));
 $('bMus').addEventListener('click',()=>setMusic(!MUS.on));
 $('mBtn').addEventListener('click',()=>setMusic(!MUS.on));
-document.addEventListener('pointerdown',()=>{ if(audio()&&AUD.ac.state==='suspended'&&!paused) AUD.ac.resume(); });
+document.addEventListener('pointerdown',()=>{
+  if(audio()&&AUD.ac){
+    if(AUD.ac.state==='suspended'&&!paused) AUD.ac.resume().catch(()=>{});
+    if(typeof initAmbAudio==='function') initAmbAudio();
+    if(typeof syncAmbientGreen==='function') syncAmbientGreen();
+  }
+});
 $('resume').addEventListener('click',()=>setPaused(false));
 $('sBtn').addEventListener('click',()=>setMuted(!AU.muted));
 $('vBtn').addEventListener('click',()=>setView(!viewFar));
 $('restart').addEventListener('click',()=>{ setPaused(false); startGame(); });
 $('qBtn').addEventListener('click',()=>{ const order=['auto',2,1,0]; qMode=order[(order.indexOf(qMode)+1)%order.length]; store.set('quality',qMode); qLevel=qMode==='auto'?2:qMode; perfStart=performance.now(); applyQuality(); });
 document.addEventListener('visibilitychange',()=>{
-  if(document.hidden){ if(state==='play'||state==='warp') setPaused(true); return; }
+  if(document.hidden){
+    if(state==='play'||state==='warp') setPaused(true);
+    if(AUD.ac&&AUD.ac.state==='running') AUD.ac.suspend().catch(()=>{});
+    return;
+  }
   if(typeof onDocumentVisible==='function') onDocumentVisible();
   if(typeof wakeRenderLoop==='function') wakeRenderLoop();
+  if(AUD.ac&&AUD.ac.state==='suspended'&&!paused) AUD.ac.resume().catch(()=>{});
 });

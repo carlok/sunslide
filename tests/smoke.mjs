@@ -284,6 +284,20 @@ try {
     await page.waitForTimeout(800);
 
     if (name === 'desktop') {
+      const amb = await page.evaluate(() => {
+        const S = window.__sunslide;
+        if (!S?.setAmbientGreenPercent || !S.getAmbientLayerGains) {
+          return { ok: false, why: 'ambient hooks missing' };
+        }
+        S.setAmbientGreenPercent(55);
+        const g = S.getAmbientLayerGains(55);
+        return {
+          ok: g.pad > 0 && g.birds > 0 && g.melody === 0,
+          g,
+          progress: S.greenProgress,
+        };
+      });
+      if (!amb.ok) fail(`desktop: ambient green mapping ${JSON.stringify(amb)}`);
       const starsHud = await page.evaluate(() => {
         const hook = window.__sunslide?.showClearStarsForTest;
         if (!hook) return { ok: false, why: 'missing showClearStarsForTest' };

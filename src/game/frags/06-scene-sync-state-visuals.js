@@ -173,4 +173,7 @@ function syncScene(time,dt){
   pMat.uniforms.uPx.value=ffMat.uniforms.uPx.value=glc.height/(2*Math.tan(camera.fov*DEG/2));
 }
 let useBloom=true;
-function render(){ if(useBloom) composer.render(); else renderer.render(scene,camera); }
+function render(){
+  if(sunL.castShadow) renderer.shadowMap.needsUpdate=shouldUpdateShadowMap({shadowsEnabled:true,gameState:state,paused,tilesAnimating:tiles.some(t=>t.anim)});
+  if(useBloom) composer.render(); else renderer.render(scene,camera);
+}

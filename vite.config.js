@@ -44,6 +44,11 @@ import {
   cellFootprintTangent,
 } from './src/logic/ecology.js';
 import {
+  resolveShadowSettings,
+  SHADOW_FRUSTUM,
+  shouldUpdateShadowMap,
+} from './src/logic/shadows-policy.js';
+import {
   planRenderLoopFrame,
   resumeClockAfterHidden,
 } from './src/logic/render-loop-policy.js';

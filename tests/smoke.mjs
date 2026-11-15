@@ -122,6 +122,11 @@ try {
     });
     await ctx.addInitScript(() => {
       window.__ssSmokeNoFullscreen = true;
+      try {
+        localStorage.setItem('sunslide.tutorialSeen', JSON.stringify(true));
+      } catch {
+        /* private mode */
+      }
     });
     const page = await ctx.newPage();
     page.setDefaultTimeout(60_000);
@@ -133,6 +138,10 @@ try {
     });
   // 'load' only — networkidle can hang on WebGL / rAF; gameplay readiness uses __sunslide.
     await page.goto(baseUrl, { waitUntil: 'load', timeout: 60_000 });
+    const debugLeak = await page.evaluate(
+      () => !!document.getElementById('debugOverlay'),
+    );
+    if (debugLeak) fail(`${name}: debug overlay must not load without ?debug`);
     await page.waitForFunction(() => !!window.__sunslide, null, { timeout: 30_000 });
 
     const menu = await page.evaluate(async () => {
@@ -253,7 +262,24 @@ try {
       return { ok: top === go || go.contains(top), top: top?.id || top?.tagName };
     });
     if (!playClick.ok) fail(`${name}: #go not top element before click ${JSON.stringify(playClick)}`);
-    await page.click('#go', { timeout: 15_000, noWaitAfter: true });
+    const playOpts = { timeout: 20_000, noWaitAfter: true };
+    try {
+      await page.click('#go', playOpts);
+    } catch (e) {
+      if (e.name !== 'TimeoutError') throw e;
+      const retryHit = await page.evaluate(() => {
+        const go = document.getElementById('go');
+        if (!go) return { ok: false, why: 'missing #go' };
+        const r = go.getBoundingClientRect();
+        const cy = Math.min(Math.max(r.top + r.height / 2, 1), innerHeight - 1);
+        const cx = Math.min(Math.max(r.left + r.width / 2, 1), innerWidth - 1);
+        const top = document.elementFromPoint(cx, cy);
+        return { ok: top === go || go.contains(top), top: top?.id || top?.tagName };
+      });
+      if (!retryHit.ok) fail(`${name}: #go covered after click timeout ${JSON.stringify(retryHit)}`);
+      await page.waitForTimeout(300);
+      await page.click('#go', playOpts);
+    }
     await page.waitForTimeout(800);
 
     const simTicks = large ? Math.min(SIM_TICKS, 2800) : SIM_TICKS;
@@ -352,6 +378,13 @@ try {
     if (layout.overflowX || layout.overflowY) fail(`${name}: page overflows the viewport`);
 
     if (large) {
+      await page.waitForFunction(
+        () => {
+          const m = window.__sunslide?.getRenderMetrics?.();
+          return m && (!m.useBloom || m.postPipelineReady);
+        },
+        { timeout: 20_000 },
+      );
       await page.evaluate(() => {
         const S = window.__sunslide;
         for (let i = 0; i < 150; i++) S.update(1 / 60);

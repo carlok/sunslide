@@ -285,7 +285,7 @@ export function startSunslide() {
       if (o.skyDay != null) skyDay = o.skyDay;
       if (o.state != null) state = o.state;
     },
-  getCamPose() {
+    getCamPose() {
       return { camLat, camLon, sunLon, zoomT, zoomTarget, viewFar, skyDay, state };
     },
     get slotGrid() { return slotGrid; },

@@ -40,6 +40,18 @@ import {
   decorTangentScale,
   cellFootprintTangent,
 } from './src/logic/ecology.js';
+import {
+  slideSnapProgress,
+  slideSnapDurationSeconds,
+  slideLiftAtProgress,
+  ghostPreviewBlend,
+  ghostTilePosition,
+  ghostEmissiveIntensity,
+  movableHighlightIntensity,
+  slideDeltaToHole,
+  isMovableSlot,
+  screenDragPull,
+} from './src/logic/slide-feel.js';
 import { FLOOR_CANVAS, MEADOW_CANVAS } from './src/logic/texture-budget.js';
 import {
   atlasGridForCount,

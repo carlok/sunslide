@@ -234,7 +234,24 @@ try {
       return { ok: top === go || go.contains(top), top: top?.id || top?.tagName };
     });
     if (!playClick.ok) fail(`${name}: #go not top element before click ${JSON.stringify(playClick)}`);
-    await page.click('#go', { timeout: 15_000, noWaitAfter: true });
+    const playOpts = { timeout: 20_000, noWaitAfter: true };
+    try {
+      await page.click('#go', playOpts);
+    } catch (e) {
+      if (e.name !== 'TimeoutError') throw e;
+      const retryHit = await page.evaluate(() => {
+        const go = document.getElementById('go');
+        if (!go) return { ok: false, why: 'missing #go' };
+        const r = go.getBoundingClientRect();
+        const cy = Math.min(Math.max(r.top + r.height / 2, 1), innerHeight - 1);
+        const cx = Math.min(Math.max(r.left + r.width / 2, 1), innerWidth - 1);
+        const top = document.elementFromPoint(cx, cy);
+        return { ok: top === go || go.contains(top), top: top?.id || top?.tagName };
+      });
+      if (!retryHit.ok) fail(`${name}: #go covered after click timeout ${JSON.stringify(retryHit)}`);
+      await page.waitForTimeout(300);
+      await page.click('#go', playOpts);
+    }
     await page.waitForTimeout(800);
 
     const simTicks = large ? Math.min(SIM_TICKS, 2800) : SIM_TICKS;

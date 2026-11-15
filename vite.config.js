@@ -44,6 +44,10 @@ import {
   cellFootprintTangent,
 } from './src/logic/ecology.js';
 import {
+  planRenderLoopFrame,
+  resumeClockAfterHidden,
+} from './src/logic/render-loop-policy.js';
+import {
   capDevicePixelRatio,
   createAdaptiveDprState,
   effectivePixelRatio,
@@ -117,7 +121,7 @@ export function startSunslide() {
     lightSlot,
     renderInfo() { return renderer.info; },
   };
-  requestAnimationFrame(frame);
+  wakeRenderLoop();
 }
 `;
     },

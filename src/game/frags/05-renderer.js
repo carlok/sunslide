@@ -32,13 +32,7 @@ function radial(stops,size=128){
 const TEX_GLOW=radial([[0,'rgba(255,255,255,1)'],[0.22,'rgba(255,255,255,.5)'],[1,'rgba(255,255,255,0)']]);
 const additive=(map,color)=>new THREE.SpriteMaterial({map,color,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true});
 
-/* ---------- post-processing ---------- */
-// EffectComposer owns half-float ping-pong targets. Do not pass a multisampled RT
-// (samples>0): on large desktop buffers many GPUs fail MSAA resolve and show black macro-tiles.
-const composer=new EffectComposer(renderer);
-composer.addPass(new RenderPass(scene,camera));
-const bloom=new UnrealBloomPass(new THREE.Vector2(256,256),0.45,0.35,1.0);
-composer.addPass(bloom); composer.addPass(new OutputPass());
+/* ---------- post-processing (lazy — see lazy-post.js + ensurePostPipeline) ---------- */
 
 /* ---------- lights ---------- */
 const sunL=new THREE.DirectionalLight('#fff0d9',3.3);
@@ -93,7 +87,7 @@ scene.add(atmo);
 
 /* ---------- meadow planet, grass blades, flowers, polar forest ---------- */
 function meadowTexture(){
-  const W=1024,H=512,c=document.createElement('canvas'); c.width=W;c.height=H; const g=c.getContext('2d');
+  const W=MEADOW_CANVAS.width,H=MEADOW_CANVAS.height,c=document.createElement('canvas'); c.width=W;c.height=H; const g=c.getContext('2d');
   g.fillStyle='#4a8c35'; g.fillRect(0,0,W,H);
   for(let i=0;i<520;i++){ const x=Math.random()*W,y=Math.random()*H,r=8+Math.random()*40, gr=g.createRadialGradient(x,y,0,x,y,r), l=Math.random()<0.5;
     gr.addColorStop(0,l?'rgba(160,210,90,0.2)':'rgba(15,55,15,0.22)'); gr.addColorStop(1,'rgba(0,0,0,0)'); g.fillStyle=gr; g.fillRect(x-r,y-r,2*r,2*r); }
@@ -434,7 +428,7 @@ function tileGeos(T,m){
   return {floor:fl.geo(),walls:wg.geo(),lamps:lg.geo(),slab:sg.geo()};
 }
 function floorTexture(T){
-  const W=512,H=256,c=document.createElement('canvas'); c.width=W;c.height=H; const g=c.getContext('2d');
+  const W=FLOOR_CANVAS.width,H=FLOOR_CANVAS.height,c=document.createElement('canvas'); c.width=W;c.height=H; const g=c.getContext('2d');
   g.fillStyle=PALETTE[T.id]; g.fillRect(0,0,W,H);
   for(let y=0;y<TH;y++) for(let x=0;x<TW;x++){ g.fillStyle=((x+y)&1)?'rgba(255,255,230,0.07)':'rgba(0,30,0,0.07)'; g.fillRect(x*64,y*64,64,64); }
   for(let i=0;i<6500;i++){ g.fillStyle=Math.random()<0.5?'rgba(255,255,220,.13)':'rgba(0,25,0,.16)'; g.fillRect(Math.random()*W,Math.random()*H,1.2,2+Math.random()*4); }

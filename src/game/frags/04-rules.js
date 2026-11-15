@@ -275,6 +275,7 @@ function gameOver(){
   $('tBlock').classList.add('hide'); $('oBlock').classList.remove('hide'); $('ov').classList.remove('hide');
 }
 function startGame(){
+  if(useBloom&&typeof ensurePostPipeline==='function') ensurePostPipeline();
   score=0; lives=3; level=1; nextLife=CFG.lifeEvery; newLevel();
   state='play'; readyT=1.6; invuln=2; zoomT=1; perfStart=performance.now();
   $('ov').classList.add('hide'); say('READY',1200); SFX.start();

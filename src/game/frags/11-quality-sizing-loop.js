@@ -6,6 +6,7 @@ function shadowDeviceCtx(){ return { qualityShadow:QUAL[qLevel].shadow, coarsePo
 function applyQuality(){
   const q=QUAL[qLevel];
   useBloom=q.bloom;
+  if(useBloom) schedulePostPipelineLoad();
   const sh=resolveShadowSettings(shadowDeviceCtx());
   sunL.castShadow=sh.enabled;
   if(sh.enabled&&sunL.shadow.mapSize.x!==sh.mapSize){ sunL.shadow.mapSize.set(sh.mapSize,sh.mapSize); if(sunL.shadow.map){ sunL.shadow.map.dispose(); sunL.shadow.map=null; } }
@@ -26,7 +27,7 @@ function resize(){
   const basePr=Math.max(minPr,Math.min(deviceCap,q.dpr,budgetPr));
   pixelRatio=effectivePixelRatio(basePr,adaptiveDprState);
   renderer.setPixelRatio(pixelRatio); renderer.setSize(w,h,false);
-  composer.setPixelRatio(pixelRatio); composer.setSize(w,h);
+  if(composer){ composer.setPixelRatio(pixelRatio); composer.setSize(w,h); }
   camera.aspect=w/h; camera.updateProjectionMatrix();
   fxDpr=Math.min(2,deviceCap); fxc.width=Math.round(w*fxDpr); fxc.height=Math.round(h*fxDpr);
   mapDpr=Math.min(2,deviceCap); mapC.width=Math.round(mapC.clientWidth*mapDpr); mapC.height=Math.round(mapC.clientHeight*mapDpr);

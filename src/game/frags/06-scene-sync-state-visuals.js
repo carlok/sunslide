@@ -178,6 +178,8 @@ function render(){
   renderer.info.autoReset=false;
   renderer.info.reset();
   if(sunL.castShadow) renderer.shadowMap.needsUpdate=shouldUpdateShadowMap({shadowsEnabled:true,gameState:state,paused,tilesAnimating:tiles.some(t=>t.anim)});
-  if(useBloom) composer.render(); else renderer.render(scene,camera);
+  if(useBloom&&composer) composer.render();
+  else if(useBloom&&!composer) { ensurePostPipeline(); renderer.render(scene,camera); }
+  else renderer.render(scene,camera);
   lastFrameDrawCalls=renderer.info.render.calls;
 }

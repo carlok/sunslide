@@ -328,6 +328,13 @@ try {
     if (layout.overflowX || layout.overflowY) fail(`${name}: page overflows the viewport`);
 
     if (large) {
+      await page.waitForFunction(
+        () => {
+          const m = window.__sunslide?.getRenderMetrics?.();
+          return m && (!m.useBloom || m.postPipelineReady);
+        },
+        { timeout: 20_000 },
+      );
       await page.evaluate(() => {
         const S = window.__sunslide;
         for (let i = 0; i < 150; i++) S.update(1 / 60);

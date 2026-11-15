@@ -27,7 +27,11 @@ function newLevel(){
   for(const g of bats) tiles[g.home].dots[1*TW+3]=0;
   const pool=tiles.filter(T=>T.id!==startTile);
   for(let i=0;i<CFG.sunstones;i++){ const T=pool.splice(ri(pool.length),1)[0]; T.dots[ri(N)]=2; }
-  dotsLeft=0; for(const T of tiles) for(let i=0;i<N;i++) if(T.dots[i]) dotsLeft++;
+  dotsLeft=0; initialGreenTarget=0;
+  for(const T of tiles) for(let i=0;i<N;i++){
+    if(T.dots[i]===1) initialGreenTarget++;
+    if(T.dots[i]) dotsLeft++;
+  }
   for(const T of tiles){ T.left=T.dots.reduce((a,v)=>a+(v?1:0),0); if(!T.left){ T.cleared=true; T.clearedAt=-99; } }
   sink=null; sinkTimer=12+Math.random()*6; exitFx=null;
   berry=null; berryTimer=16+Math.random()*10; waypoint=-1; combo=0; comboT=9; boostT=0; deaths=0;
@@ -53,6 +57,7 @@ function eatAt(t,x,y){
   const mult=isHome(T)?2:1, pos=cellWorld(t,x,y,0.035);
   if(v===1){
     markBubbleCollected(ecologyState,t,x,y,gameClock);
+    if(typeof syncAmbientGreen==='function') syncAmbientGreen();
     combo=comboT<CFG.comboWin?combo+1:1; comboT=0;
     addScore((10+Math.min(20,(combo-1)*2))*mult); SFX.pop(combo-1); emit(pos,10,PC.bubble,0.2,0.007,0.45,0.25);
     if(combo>=5&&combo%5===0){ floatAt(pos,'combo ×'+combo,'#7fe8ff'); if(combo%20===0) say('Combo ×'+combo+'!',900); }
@@ -278,4 +283,5 @@ function startGame(){
   score=0; lives=3; level=1; nextLife=CFG.lifeEvery; newLevel();
   state='play'; readyT=1.6; invuln=2; zoomT=1; perfStart=performance.now();
   $('ov').classList.add('hide'); say('READY',1200); SFX.start();
+  if(typeof syncAmbientGreen==='function') syncAmbientGreen();
 }

@@ -228,6 +228,23 @@ try {
     await page.click('#go', { timeout: 15_000, noWaitAfter: true });
     await page.waitForTimeout(800);
 
+    if (name === 'desktop') {
+      const amb = await page.evaluate(() => {
+        const S = window.__sunslide;
+        if (!S?.setAmbientGreenPercent || !S.getAmbientLayerGains) {
+          return { ok: false, why: 'ambient hooks missing' };
+        }
+        S.setAmbientGreenPercent(55);
+        const g = S.getAmbientLayerGains(55);
+        return {
+          ok: g.pad > 0 && g.birds > 0 && g.melody === 0,
+          g,
+          progress: S.greenProgress,
+        };
+      });
+      if (!amb.ok) fail(`desktop: ambient green mapping ${JSON.stringify(amb)}`);
+    }
+
     const simTicks = large ? Math.min(SIM_TICKS, 2800) : SIM_TICKS;
     const res = await page.evaluate(
       ({ ticks }) => {

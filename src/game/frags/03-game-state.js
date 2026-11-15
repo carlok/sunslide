@@ -8,7 +8,7 @@ let want=-1, cooldown=0, readyT=0, invuln=0, fright=0, chain=0, dyingT=0, clearT
 let aligned=false, startTile=0;
 let player=null, bats=[];
 let viewFar=store.get('viewFar',false), zoomT=1, zoomTarget=1, camLat=0.3, camLon=0;
-let ecologyState=null;
+let ecologyState=null, initialGreenTarget=0;
 
 /* ---------- maze islands ---------- */
 function makeTile(id){

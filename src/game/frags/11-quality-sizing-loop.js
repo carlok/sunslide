@@ -1,6 +1,7 @@
 const QUAL=[{n:'Low',dpr:1,px:0.7e6,shadow:0,bloom:false,blades:7000,flowers:700,ff:200},{n:'Medium',dpr:1.5,px:1.4e6,shadow:1024,bloom:true,blades:15000,flowers:1500,ff:400},{n:'High',dpr:2,px:2.4e6,shadow:2048,bloom:true,blades:30000,flowers:2800,ff:600}];
 let qMode=store.get('quality','auto'); if(![ 'auto',0,1,2].includes(qMode)) qMode='auto';
 let qLevel=qMode==='auto'?2:qMode, pixelRatio=1, perfStart=performance.now(), perfAcc=0, perfN=0, renderedPaused=false;
+let adaptiveDprState=createAdaptiveDprState({ deviceDpr: window.devicePixelRatio||1 });
 function applyQuality(){
   const q=QUAL[qLevel];
   useBloom=q.bloom;
@@ -17,12 +18,15 @@ function resize(){
   const w=Math.max(1,stageEl.clientWidth), h=Math.max(1,stageEl.clientHeight), q=QUAL[qLevel];
   const area=w*h, budgetPr=Math.sqrt(q.px/area);
   const minPr=useBloom?(area>1.2e6?0.85:0.75):0.6;
-  pixelRatio=Math.max(minPr,Math.min(window.devicePixelRatio||1,q.dpr,budgetPr));
+  const deviceCap=capDevicePixelRatio(window.devicePixelRatio||1,2);
+  syncAdaptiveCap(adaptiveDprState,window.devicePixelRatio||1,2);
+  const basePr=Math.max(minPr,Math.min(deviceCap,q.dpr,budgetPr));
+  pixelRatio=effectivePixelRatio(basePr,adaptiveDprState);
   renderer.setPixelRatio(pixelRatio); renderer.setSize(w,h,false);
   composer.setPixelRatio(pixelRatio); composer.setSize(w,h);
   camera.aspect=w/h; camera.updateProjectionMatrix();
-  fxDpr=Math.min(2,window.devicePixelRatio||1); fxc.width=Math.round(w*fxDpr); fxc.height=Math.round(h*fxDpr);
-  mapDpr=Math.min(2,window.devicePixelRatio||1); mapC.width=Math.round(mapC.clientWidth*mapDpr); mapC.height=Math.round(mapC.clientHeight*mapDpr);
+  fxDpr=Math.min(2,deviceCap); fxc.width=Math.round(w*fxDpr); fxc.height=Math.round(h*fxDpr);
+  mapDpr=Math.min(2,deviceCap); mapC.width=Math.round(mapC.clientWidth*mapDpr); mapC.height=Math.round(mapC.clientHeight*mapDpr);
   starMat.uniforms.uDpr.value=pixelRatio; renderedPaused=false;
 }
 new ResizeObserver(()=>resize()).observe(stageEl);
@@ -77,6 +81,7 @@ function pollPad(){
 function frame(ts){
   requestAnimationFrame(frame);
   const now=ts/1000, dt=Math.min(0.05,Math.max(0.0001,(now-lastT)||0.016)); lastT=now;
+  if(!window.__ssSmokeNoFullscreen && tickAdaptiveDpr(adaptiveDprState,dt*1000)) resize();
   perfSample(dt*1000);
   pollPad();
   if(!paused) update(dt);

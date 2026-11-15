@@ -142,7 +142,8 @@ const flowers=new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1,0),new THR
 flowers.frustumCulled=false; scene.add(flowers);
 (function polarDecor(){
   const m=new THREE.Matrix4(), d=v3();
-  const inst=(geo,mat,n,shadow=true)=>{ const im=new THREE.InstancedMesh(geo,mat,n); im.castShadow=shadow; im.receiveShadow=true; im.frustumCulled=false; scene.add(im); return im; };
+  // Polar trees/rocks sit on a tight cap; at grazing sun they cast planet-spanning shadow-map streaks.
+  const inst=(geo,mat,n,shadow=false)=>{ const im=new THREE.InstancedMesh(geo,mat,n); im.castShadow=shadow; im.receiveShadow=true; im.frustumCulled=false; scene.add(im); return im; };
   const nT=150;
   const trunk=inst(new THREE.CylinderGeometry(0.12,0.18,1,6).translate(0,0.5,0),new THREE.MeshStandardMaterial({color:'#6b4a2e',roughness:0.9}),nT);
   const crown1=inst(new THREE.ConeGeometry(0.55,0.95,7).translate(0,1.0,0),new THREE.MeshStandardMaterial({color:'#2f6f3d',roughness:0.8,flatShading:true}),nT);
@@ -300,8 +301,7 @@ function ensureTileBatches(){
   lampBatch=new THREE.BatchedMesh(NT,pools.lamps.v,pools.lamps.i,lampMat);
   slabBatch=new THREE.BatchedMesh(NT,pools.slab.v,pools.slab.i,slabMat);
   for(const b of [floorBatch,wallBatch,lampBatch,slabBatch]){ b.frustumCulled=false; b.receiveShadow=true; scene.add(b); }
-  // BatchedMesh + sphere-mapped customDepthMaterial still casts planet-spanning slim streaks (r160).
-  floorBatch.castShadow=false; wallBatch.castShadow=false; slabBatch.castShadow=false; lampBatch.castShadow=false;
+  floorBatch.castShadow=false; wallBatch.castShadow=slabBatch.castShadow=true; lampBatch.castShadow=false;
 }
 function syncTileBatchUniforms(){
   if(!floorBatch) return;

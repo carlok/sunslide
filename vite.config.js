@@ -41,6 +41,27 @@ import {
   cellFootprintTangent,
 } from './src/logic/ecology.js';
 import { FLOOR_CANVAS, MEADOW_CANVAS } from './src/logic/texture-budget.js';
+import {
+  atlasGridForCount,
+  atlasRectForTile,
+  mapUvToAtlas,
+} from './src/logic/floor-atlas.js';
+import {
+  resolveShadowSettings,
+  SHADOW_FRUSTUM,
+  shouldUpdateShadowMap,
+} from './src/logic/shadows-policy.js';
+import {
+  planRenderLoopFrame,
+  resumeClockAfterHidden,
+} from './src/logic/render-loop-policy.js';
+import {
+  capDevicePixelRatio,
+  createAdaptiveDprState,
+  effectivePixelRatio,
+  syncAdaptiveCap,
+  tickAdaptiveDpr,
+} from './src/logic/adaptive-pixel-ratio.js';
 
 window.__ssBoot = true;
 
@@ -108,10 +129,13 @@ export function startSunslide() {
         qMode,
         useBloom,
         pixelRatio,
+        drawCalls: lastFrameDrawCalls,
+        adaptiveDpr: adaptiveDprState.current,
         stageCss: [stageEl.clientWidth, stageEl.clientHeight],
         canvasBuffer: [glc.width, glc.height],
         composerRT: composer ? [composer.renderTarget1.width, composer.renderTarget1.height] : null,
         postPipelineReady: !!composer,
+        info: renderer.info,
       };
     },
     setView,
@@ -120,8 +144,9 @@ export function startSunslide() {
     isHome,
     lightSlot,
     renderInfo() { return renderer.info; },
+    sampleDrawCalls() { render(); return lastFrameDrawCalls; },
   };
-  requestAnimationFrame(frame);
+  wakeRenderLoop();
 }
 `;
     },

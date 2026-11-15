@@ -34,7 +34,31 @@
     </button>
     <div id="menuScrim" class="menu-scrim hide" aria-hidden="true" tabindex="-1"></div>
     <div id="menuPanel" class="menu-panel hide" role="dialog" aria-modal="true" aria-labelledby="menuTitle" tabindex="-1">
-      <h2 id="menuTitle">Credits &amp; controls</h2>
+      <h2 id="menuTitle">Credits &amp; settings</h2>
+      <div id="menuSettings" class="menu-block menu-settings" aria-labelledby="settingsTitle">
+        <h3 id="settingsTitle" class="menu-subhead">Settings</h3>
+        <div class="settings-list">
+          <label class="settings-row" for="setSound"><input type="checkbox" id="setSound" checked /> Sound effects</label>
+          <label class="settings-row" for="setMusic"><input type="checkbox" id="setMusic" checked /> Music</label>
+          <label class="settings-row" for="setHaptics"><input type="checkbox" id="setHaptics" checked /> Haptics</label>
+          <label class="settings-row" for="setQuality"><span class="settings-label">Quality</span>
+            <select id="setQuality" aria-label="Graphics quality">
+              <option value="auto">Auto</option>
+              <option value="0">Low</option>
+              <option value="1">Medium</option>
+              <option value="2">High</option>
+            </select>
+          </label>
+          <label class="settings-row" for="setReducedMotion"><span class="settings-label">Reduced motion</span>
+            <select id="setReducedMotion" aria-label="Reduced motion">
+              <option value="system">System</option>
+              <option value="on">On</option>
+              <option value="off">Off</option>
+            </select>
+          </label>
+          <label class="settings-row" for="setColorBlind"><input type="checkbox" id="setColorBlind" /> Colour-blind friendly palette</label>
+        </div>
+      </div>
       <div id="credits" class="menu-block">
         <p><strong>Sunslide</strong> — hop as Pip the bubble frog on a tiny planet: a sunlit <b>15-puzzle of sliding meadow islands</b>. © <a href="https://github.com/carlok" rel="noopener noreferrer">carlok</a>.</p>
         <p>Source <a href="https://github.com/carlok/sunslide/blob/main/LICENSE" rel="noopener noreferrer">Apache-2.0</a>. Built with <a href="https://threejs.org/" rel="noopener noreferrer">three.js</a> (MIT) and Vite.</p>

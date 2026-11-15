@@ -43,12 +43,54 @@ import {
   decorTangentScale,
   cellFootprintTangent,
 } from './src/logic/ecology.js';
+import {
+  settingsFromStore,
+  resolveReducedMotion,
+} from './src/logic/settings.js';
+import { createStore } from './src/logic/store.js';
+import { createHaptics } from './src/logic/haptics.js';
+import {
+  PALETTE_COLOR_BLIND,
+  PALETTE_STANDARD,
+  highlightTheme,
+} from './src/logic/visual-theme.js';
+
+const settingsStore = createStore();
+const haptics = createHaptics();
+let mapEligLitPrefix = 'rgba(255,210,94,';
+let mapEligDarkStroke = 'rgba(127,140,255,0.85)';
+
+function applyColorBlindPalette(cb) {
+  const src = cb ? PALETTE_COLOR_BLIND : PALETTE_STANDARD;
+  for (let i = 0; i < NT; i++) PALETTE[i] = src[i];
+  applyRendererTheme(cb);
+  const t = highlightTheme(!!cb);
+  mapEligLitPrefix = t.mapEligLit;
+  mapEligDarkStroke = cb ? 'rgba(94,176,255,0.9)' : 'rgba(127,140,255,0.85)';
+  if (tiles?.length) refreshTiles();
+}
+
+function applySettings(s) {
+  if (s.sound !== undefined) setMuted(!s.sound);
+  if (s.music !== undefined) setMusic(!!s.music);
+  if (s.haptics !== undefined) haptics.setEnabled(!!s.haptics);
+  if (s.reducedMotion !== undefined) applyReducedFromSettings(s.reducedMotion);
+  if (s.quality !== undefined) {
+    qMode = s.quality;
+    qLevel = s.quality === 'auto' ? 2 : s.quality;
+    perfStart = performance.now();
+    applyQuality();
+  }
+  if (s.colorBlind !== undefined) applyColorBlindPalette(s.colorBlind);
+  syncButtons();
+}
 
 window.__ssBoot = true;
 
 ${frags}
 
 export function startSunslide() {
+  applySettings(settingsFromStore(settingsStore));
   newLevel();
   applyQuality();
   const bestEl = document.getElementById('bestline');
@@ -107,6 +149,9 @@ export function startSunslide() {
     isHome,
     lightSlot,
     renderInfo() { return renderer.info; },
+    applySettings,
+    get settings() { return settingsFromStore(settingsStore); },
+    haptics,
   };
   requestAnimationFrame(frame);
 }

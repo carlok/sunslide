@@ -357,6 +357,11 @@ const PROF=[[-1,0,-1,0],[-1,0.72,-1,0.1],[-0.86,0.95,-0.6,0.8],[-0.55,1.0,-0.15,
 const COL=h=>new THREE.Color(h);
 const C_STONE=COL('#cbc2ae'), C_CAP=COL('#ece5d3'), C_BASE=COL('#7f7766'), C_MOSS=COL('#86b35a'), C_POST=COL('#b3a993'), C_SOIL=COL('#7a5232'), C_ROCK=COL('#3a312c');
 const C_WHITE=COL('#ffffff'), C_BLACK=COL('#000000'), C_GOLDWALL=COL('#ffd477'), C_GOLDE=COL('#7a4a00'), C_LAMP=COL('#ffb24a'), C_LAMPHOME=COL('#ffd25e'), C_HI=COL('#ffcc55'), C_HIDARK=COL('#4a5cff'), C_BLOOM=COL('#ff9ccf');
+function applyRendererTheme(cb){
+  const t=highlightTheme(!!cb);
+  C_HI.copy(COL(t.hi)); C_HIDARK.copy(COL(t.hiDark)); C_BLOOM.copy(COL(t.bloom));
+  C_MOSS.copy(COL(cb?'#6aaee0':'#86b35a'));
+}
 function seamMask(T){
   if(T.anim) return 0;
   const c=T.slot.c, r=T.slot.r;

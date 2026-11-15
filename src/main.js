@@ -1,10 +1,12 @@
 import { initAppMenu } from './menu.js';
+import { initSettingsMenu } from './settings-menu.js';
 import { initMapToggle } from './map-toggle.js';
 import { initFullscreen } from './fullscreen.js';
 import { initTutorial } from './tutorial.js';
 
 async function boot() {
   initAppMenu();
+  initSettingsMenu();
   initTutorial();
   initMapToggle();
   initFullscreen();

@@ -164,7 +164,8 @@ try {
       );
       const outside =
         btn.getAttribute('aria-expanded') === 'false' && panel.classList.contains('hide');
-      return { ok: open && closed && open2 && outside, open, closed, open2, outside };
+      const settings = !!document.getElementById('menuSettings');
+      return { ok: open && closed && open2 && outside && settings, open, closed, open2, outside, settings };
     });
     if (!menu.ok) fail(`${name}: hamburger menu ${JSON.stringify(menu)}`);
     await page.evaluate(() => {

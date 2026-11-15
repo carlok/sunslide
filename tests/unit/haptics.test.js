@@ -29,6 +29,22 @@ describe('haptics', () => {
     expect(vibrate).toHaveBeenLastCalledWith(HAPTIC_BUBBLE_MS);
   });
 
+  it('respects enabled flag', () => {
+    const vibrate = vi.fn(() => true);
+    const bag = {};
+    const storage = {
+      getItem: (k) => (k in bag ? bag[k] : null),
+      setItem: (k, v) => {
+        bag[k] = v;
+      },
+    };
+    const h = createHaptics({ navigator: { vibrate }, storage });
+    expect(h.pulse(10)).toBe(true);
+    h.setEnabled(false);
+    expect(h.pulse(10)).toBe(false);
+    expect(vibrate).toHaveBeenCalledTimes(1);
+  });
+
   it('no-ops when disabled or unsupported', () => {
     const vibrate = vi.fn();
     const bag = {};

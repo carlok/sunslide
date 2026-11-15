@@ -1,9 +1,13 @@
-/** Vibration feedback (#38-compatible; gated by sunslide.haptics). */
+/** Vibration feedback (feature-detected; gated by settings). */
 import { createStore } from './store.js';
 import { SETTINGS_KEYS } from './settings.js';
 
-export function hapticsSupported(navigator = globalThis.navigator) {
-  return !!(navigator && typeof navigator.vibrate === 'function');
+export const HAPTIC_TILE_LOCK_MS = 14;
+export const HAPTIC_BUBBLE_MS = 10;
+
+export function hapticsSupported(navigator) {
+  const nav = navigator ?? (typeof globalThis.navigator !== 'undefined' ? globalThis.navigator : null);
+  return !!(nav && typeof nav.vibrate === 'function');
 }
 
 export function createHaptics({ navigator, storage, prefix = 'sunslide.' } = {}) {
@@ -29,10 +33,10 @@ export function createHaptics({ navigator, storage, prefix = 'sunslide.' } = {})
       }
     },
     tileLock() {
-      return this.pulse(14);
+      return this.pulse(HAPTIC_TILE_LOCK_MS);
     },
     bubbleCollect() {
-      return this.pulse(10);
+      return this.pulse(HAPTIC_BUBBLE_MS);
     },
   };
 }

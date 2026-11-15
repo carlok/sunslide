@@ -1,7 +1,7 @@
 function slotDist(a,b){ const dc=Math.abs(a.c-b.c); return Math.min(dc,COLS-dc)+Math.abs(a.r-b.r); }
 function newLevel(){
   if(!ecologyState) ecologyState=createEcologyState(); else clearEcology(ecologyState);
-  for(const T of tiles) disposeTileRender(T);
+  if(typeof resetTileBatches==='function') resetTileBatches();
   tiles=[]; for(let i=0;i<NT;i++) tiles.push(makeTile(i));
   slotGrid=[...Array(ROWS)].map(()=>Array(COLS).fill(-1));
   let k=0; for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){ if(r===3&&c===3) continue; slotGrid[r][c]=k; tiles[k].slot={c,r}; k++; }
@@ -196,10 +196,15 @@ function collide(){
     }
   }
 }
-function rumble(ms,strong,weak){
+function gamepadRumble(ms,strong,weak){
   try{ const gp=PAD.idx>=0&&navigator.getGamepads?navigator.getGamepads()[PAD.idx]:null, va=gp&&gp.vibrationActuator;
     if(va&&va.playEffect) va.playEffect('dual-rumble',{duration:ms,strongMagnitude:strong,weakMagnitude:weak}).catch(()=>{});
-    else if(navigator.vibrate&&matchMedia('(pointer:coarse)').matches) navigator.vibrate(Math.round(ms*0.6));
+  }catch(e){}
+}
+function rumble(ms,strong,weak){
+  gamepadRumble(ms,strong,weak);
+  try{
+    if(navigator.vibrate&&matchMedia('(pointer:coarse)').matches) navigator.vibrate(Math.round(ms*0.6));
   }catch(e){}
 }
 function die(){
@@ -226,7 +231,7 @@ function trySlide(c,r){
   return '';
 }
 function onSlideEnd(T){
-  refreshTiles(); SFX.thump(); dustAround(T); shakeT=Math.max(shakeT,0.2); rumble(90,0.5,0.2); haptics.tileLock();
+  refreshTiles(); SFX.thump(); dustAround(T); shakeT=Math.max(shakeT,0.2); gamepadRumble(90,0.5,0.2); haptics.tileLock();
   if(isHome(T)&&!T.homeAwarded){
     T.homeAwarded=true; addScore(250); SFX.home();
     const hasBat=bats.some(g=>g.home===T.id);
@@ -241,7 +246,7 @@ function update(dt){
   sunLon=mod(sunLon-dt*TAU/dayLen(),TAU);
   shakeT=Math.max(0,shakeT-dt);
   cooldown=Math.max(0,cooldown-dt);
-  for(const T of tiles) if(T.anim){ T.anim.t+=dt/CFG.slideT; if(T.anim.t>=1){ T.anim=null; cooldown=CFG.slideCool; onSlideEnd(T); } }
+  for(const T of tiles) if(T.anim){ T.anim.t+=dt/slideSnapDurationSeconds(REDUCED); if(T.anim.t>=1){ T.anim=null; cooldown=CFG.slideCool; onSlideEnd(T); } }
   for(const g of bats) g.asleep=isHome(tiles[g.home]);
   if(state==='play'){
     if(readyT>0) readyT-=dt;
@@ -276,6 +281,7 @@ function gameOver(){
   $('tBlock').classList.add('hide'); $('oBlock').classList.remove('hide'); $('ov').classList.remove('hide');
 }
 function startGame(){
+  if(useBloom&&typeof ensurePostPipeline==='function') ensurePostPipeline();
   score=0; lives=3; level=1; nextLife=CFG.lifeEvery; newLevel();
   state='play'; readyT=1.6; invuln=2; zoomT=1; perfStart=performance.now();
   $('ov').classList.add('hide'); say('READY',1200); SFX.start();

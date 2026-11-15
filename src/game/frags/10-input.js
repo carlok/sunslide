@@ -1,6 +1,7 @@
 function setPaused(p){
   if(p&&state!=='play'&&state!=='dying'&&state!=='warp') return;
   paused=p; renderedPaused=false; $('pause').classList.toggle('hide',!p); syncButtons();
+  if(!p&&typeof refreshShadowMap==='function') refreshShadowMap();
   if(AUD.ac){ try{ p?AUD.ac.suspend():AUD.ac.resume(); }catch(e){} }
   if(typeof wakeRenderLoop==='function') wakeRenderLoop();
 }

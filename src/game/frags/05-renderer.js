@@ -142,7 +142,8 @@ const flowers=new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1,0),new THR
 flowers.frustumCulled=false; scene.add(flowers);
 (function polarDecor(){
   const m=new THREE.Matrix4(), d=v3();
-  const inst=(geo,mat,n,shadow=true)=>{ const im=new THREE.InstancedMesh(geo,mat,n); im.castShadow=shadow; im.receiveShadow=true; im.frustumCulled=false; scene.add(im); return im; };
+  // Polar trees/rocks sit on a tight cap; at grazing sun they cast planet-spanning shadow-map streaks.
+  const inst=(geo,mat,n,shadow=false)=>{ const im=new THREE.InstancedMesh(geo,mat,n); im.castShadow=shadow; im.receiveShadow=true; im.frustumCulled=false; scene.add(im); return im; };
   const nT=150;
   const trunk=inst(new THREE.CylinderGeometry(0.12,0.18,1,6).translate(0,0.5,0),new THREE.MeshStandardMaterial({color:'#6b4a2e',roughness:0.9}),nT);
   const crown1=inst(new THREE.ConeGeometry(0.55,0.95,7).translate(0,1.0,0),new THREE.MeshStandardMaterial({color:'#2f6f3d',roughness:0.8,flatShading:true}),nT);
@@ -293,8 +294,8 @@ function ensureTileBatches(){
   const wallMat=wireBatchSphereMat(new THREE.MeshStandardMaterial({vertexColors:true,roughness:0.82,emissive:'#000'}),'wall');
   const lampMat=wireBatchSphereMat(new THREE.MeshStandardMaterial({color:'#fff3cf',emissive:'#ffb24a',emissiveIntensity:1,roughness:0.3}),'lamp');
   const slabMat=wireBatchSphereMat(new THREE.MeshStandardMaterial({vertexColors:true,roughness:1,shadowSide:THREE.DoubleSide}),'slab');
-  const depthMat=wireBatchSphereMat(new THREE.MeshDepthMaterial({depthPacking:THREE.RGBADepthPacking}),'slab');
-  floorMat.customDepthMaterial=wallMat.customDepthMaterial=slabMat.customDepthMaterial=depthMat;
+  wallMat.customDepthMaterial=wireBatchSphereMat(new THREE.MeshDepthMaterial({depthPacking:THREE.RGBADepthPacking}),'wall');
+  slabMat.customDepthMaterial=wireBatchSphereMat(new THREE.MeshDepthMaterial({depthPacking:THREE.RGBADepthPacking}),'slab');
   floorBatch=new THREE.BatchedMesh(NT,pools.floor.v,pools.floor.i,floorMat);
   wallBatch=new THREE.BatchedMesh(NT,pools.walls.v,pools.walls.i,wallMat);
   lampBatch=new THREE.BatchedMesh(NT,pools.lamps.v,pools.lamps.i,lampMat);

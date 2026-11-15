@@ -80,5 +80,13 @@ describe('shadows-policy', () => {
         tilesAnimating: false,
       }),
     ).toBe(false);
+    expect(
+      shouldUpdateShadowMap({
+        shadowsEnabled: true,
+        gameState: 'win',
+        paused: false,
+        tilesAnimating: false,
+      }),
+    ).toBe(true);
   });
 });

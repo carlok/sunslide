@@ -181,6 +181,9 @@ function syncScene(time,dt){
   pMat.uniforms.uPx.value=ffMat.uniforms.uPx.value=glc.height/(2*Math.tan(camera.fov*DEG/2));
 }
 let useBloom=true;
+function refreshShadowMap(){
+  if(sunL.castShadow) renderer.shadowMap.needsUpdate=true;
+}
 function render(){
   renderer.info.autoReset=false;
   renderer.info.reset();

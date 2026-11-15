@@ -321,6 +321,7 @@ function gameOver(){
 }
 function goTitle(){
   state='title'; paused=false;
+  if(typeof refreshShadowMap==='function') refreshShadowMap();
   $('ov').classList.remove('hide');
   $('tBlock').classList.remove('hide');
   $('oBlock').classList.add('hide');
@@ -333,6 +334,7 @@ function startGame(){
   if(typeof window.__ssHideClearStars==='function') window.__ssHideClearStars();
   if(typeof window.__ssRefreshTitleStars==='function') window.__ssRefreshTitleStars();
   state='play'; readyT=1.6; invuln=2; zoomT=1; perfStart=performance.now();
+  if(typeof refreshShadowMap==='function') refreshShadowMap();
   $('ov').classList.add('hide'); $('wBlock').classList.add('hide'); say('READY',1200); SFX.start();
   if(typeof syncAmbientGreen==='function') syncAmbientGreen();
 }

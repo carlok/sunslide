@@ -275,6 +275,19 @@ export function startSunslide() {
       };
     },
     setView,
+    setCamPose(o = {}) {
+      if (o.camLat != null) camLat = o.camLat;
+      if (o.camLon != null) camLon = o.camLon;
+      if (o.sunLon != null) sunLon = o.sunLon;
+      if (o.zoomT != null) zoomT = o.zoomT;
+      if (o.zoomTarget != null) zoomTarget = o.zoomTarget;
+      if (o.viewFar != null) viewFar = o.viewFar;
+      if (o.skyDay != null) skyDay = o.skyDay;
+      if (o.state != null) state = o.state;
+    },
+    getCamPose() {
+      return { camLat, camLon, sunLon, zoomT, zoomTarget, viewFar, skyDay, state };
+    },
     get slotGrid() { return slotGrid; },
     holeNeighbors,
     isHome,

@@ -55,6 +55,7 @@ export function shouldUpdateShadowMap(ctx) {
   if (ctx.tilesAnimating) return true;
   if (ctx.gameState === 'title' || ctx.gameState === 'over') return true;
   if (ctx.gameState === 'warp' || ctx.gameState === 'dying' || ctx.gameState === 'clear') return true;
+  if (ctx.gameState === 'win') return true;
   if (ctx.gameState === 'play' && !ctx.paused) return true;
   return false;
 }

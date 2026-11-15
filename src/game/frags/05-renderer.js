@@ -300,7 +300,8 @@ function ensureTileBatches(){
   lampBatch=new THREE.BatchedMesh(NT,pools.lamps.v,pools.lamps.i,lampMat);
   slabBatch=new THREE.BatchedMesh(NT,pools.slab.v,pools.slab.i,slabMat);
   for(const b of [floorBatch,wallBatch,lampBatch,slabBatch]){ b.frustumCulled=false; b.receiveShadow=true; scene.add(b); }
-  floorBatch.castShadow=false; wallBatch.castShadow=slabBatch.castShadow=true; lampBatch.castShadow=false;
+  // Sphere-mapped BatchedMesh + customDepthMaterial casts bogus planet-scale shadows (r160 shadow pass).
+  floorBatch.castShadow=false; wallBatch.castShadow=false; slabBatch.castShadow=false; lampBatch.castShadow=false;
 }
 function syncTileBatchUniforms(){
   if(!floorBatch) return;

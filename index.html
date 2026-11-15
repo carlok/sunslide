@@ -34,13 +34,39 @@
     </button>
     <div id="menuScrim" class="menu-scrim hide" aria-hidden="true" tabindex="-1"></div>
     <div id="menuPanel" class="menu-panel hide" role="dialog" aria-modal="true" aria-labelledby="menuTitle" tabindex="-1">
-      <h2 id="menuTitle">Credits &amp; controls</h2>
+      <h2 id="menuTitle">Credits &amp; settings</h2>
+      <div id="menuSettings" class="menu-block menu-settings" aria-labelledby="settingsTitle">
+        <h3 id="settingsTitle" class="menu-subhead">Settings</h3>
+        <div class="settings-list">
+          <label class="settings-row" for="setSound"><input type="checkbox" id="setSound" checked /> Sound effects</label>
+          <label class="settings-row" for="setMusic"><input type="checkbox" id="setMusic" checked /> Music</label>
+          <label class="settings-row" for="setHaptics"><input type="checkbox" id="setHaptics" checked /> Haptics</label>
+          <label class="settings-row" for="setQuality"><span class="settings-label">Quality</span>
+            <select id="setQuality" aria-label="Graphics quality">
+              <option value="auto">Auto</option>
+              <option value="0">Low</option>
+              <option value="1">Medium</option>
+              <option value="2">High</option>
+            </select>
+          </label>
+          <label class="settings-row" for="setReducedMotion"><span class="settings-label">Reduced motion</span>
+            <select id="setReducedMotion" aria-label="Reduced motion">
+              <option value="system">System</option>
+              <option value="on">On</option>
+              <option value="off">Off</option>
+            </select>
+          </label>
+          <label class="settings-row" for="setColorBlind"><input type="checkbox" id="setColorBlind" /> Colour-blind friendly palette</label>
+        </div>
+      </div>
       <div id="credits" class="menu-block">
         <p><strong>Sunslide</strong> — hop as Pip the bubble frog on a tiny planet: a sunlit <b>15-puzzle of sliding meadow islands</b>. © <a href="https://github.com/carlok" rel="noopener noreferrer">carlok</a>.</p>
+        <p>Slide the meadow islands (a 15-puzzle) to collect bubbles and turn the planet green.</p>
         <p>Source <a href="https://github.com/carlok/sunslide/blob/main/LICENSE" rel="noopener noreferrer">Apache-2.0</a>. Built with <a href="https://threejs.org/" rel="noopener noreferrer">three.js</a> (MIT) and Vite.</p>
         <p><a href="https://github.com/carlok/sunslide" rel="noopener noreferrer">github.com/carlok/sunslide</a></p>
       </div>
       <div id="keyshelp" class="menu-block" aria-label="Control reference">
+        <p><button type="button" id="menuTutorialBtn" class="menu-inline-btn">How to play</button> — short 3-step tutorial</p>
         <p><b>Arrows / WASD</b> hop · <b>Space</b> or <b>wheel</b> planet view · <b>P</b> pause · <b>M</b> music</p>
         <p><b>Click the map</b> to slide an island or set a waypoint</p>
         <p><b>Gamepad</b>: stick/D-pad hop · <b>LB/RB</b> pick island · <b>A</b> slide · <b>X/Y</b> view · <b>Start</b> pause · <b>Select</b> music</p>
@@ -52,6 +78,11 @@
       <button type="button" id="bMus" aria-label="Toggle music">♪</button>
     </div>
     <aside id="overlay" aria-label="Game HUD">
+      <div id="greenGoal" class="green-goal" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Planet greening">
+        <span class="green-ring" aria-hidden="true"></span>
+        <span class="green-mark" aria-hidden="true">🌿</span>
+        <span id="greenPct" class="green-pct">0%</span>
+      </div>
       <header id="hud" aria-label="Score and lives">
         <div><small id="hud-score-l">Score</small><span id="score" aria-labelledby="hud-score-l">0</span></div>
         <div class="c"><small id="hud-level-l">Sector</small><span id="level" aria-labelledby="hud-level-l">1</span></div>
@@ -59,6 +90,10 @@
         <div class="c"><small id="hud-home-l">Home</small><span id="home" aria-labelledby="hud-home-l">0/15</span></div>
         <div class="r"><small id="hud-lives-l">Lives</small><span id="lives" aria-labelledby="hud-lives-l"></span></div>
       </header>
+      <div id="clearStars" class="clear-stars hide" role="status" aria-live="polite" aria-atomic="true">
+        <span id="starRow" class="star-row" aria-hidden="true"></span>
+        <span id="clearStarMeta" class="clear-star-meta"></span>
+      </div>
       <footer id="status" aria-label="Day phase and hints">
         <span id="chip" role="status" aria-live="polite">DAY</span>
         <span id="hint"></span>
@@ -81,7 +116,7 @@
     <div id="ov" class="panel" role="dialog" aria-modal="true" aria-labelledby="title-main">
       <div id="tBlock">
         <h1 id="title-main">SUNSLIDE</h1>
-        <p>Pip the bubble frog lives on a tiny planet made of 15 sliding meadow islands.</p>
+        <p>Slide the meadow islands (a 15-puzzle) to collect bubbles and turn the planet green.</p>
         <ul>
           <li><b>Swipe</b>, use the arrows or the pad to hop. Pop bubbles in a row for <b>combos</b>.</li>
           <li><b>Tap an island</b> next to the empty meadow, on the planet or on the map, to slide it. Only sunlit islands move.</li>
@@ -94,12 +129,29 @@
         </ul>
         <button type="button" class="big" id="go">PLAY</button>
         <p class="keys" id="bestline"></p>
+        <p class="keys hide" id="starline"></p>
         <p class="keys">☰ Menu for credits and full control reference · gamepads supported</p>
       </div>
       <div id="oBlock" class="hide">
         <h1 id="title-over">LIGHTS OUT</h1>
         <p id="res"></p>
         <button type="button" class="big" id="again">AGAIN</button>
+      </div>
+      <div id="wBlock" class="hide" role="dialog" aria-modal="true" aria-labelledby="title-win" tabindex="-1">
+        <h1 id="title-win">SECTOR CLEAR</h1>
+        <p id="winAnnounce" class="sr-only" aria-live="polite" aria-atomic="true"></p>
+        <dl class="win-stats" aria-label="Run summary">
+          <div><dt>Moves</dt><dd id="winMoves">0</dd></div>
+          <div><dt>Time</dt><dd id="winTime">0s</dd></div>
+          <div><dt>Tiles greened</dt><dd id="winGreen">0</dd></div>
+          <div><dt>Islands home</dt><dd id="winHome">0/15</dd></div>
+        </dl>
+        <p id="winBest" class="win-new-best hide" role="status">New best!</p>
+        <p id="winPrevBest" class="keys hide"></p>
+        <div class="win-actions">
+          <button type="button" class="big touch-target" id="winAgain">Play again</button>
+          <button type="button" class="big touch-target ghost" id="winMenu">Menu</button>
+        </div>
       </div>
     </div>
     <div id="pause" class="panel hide" role="dialog" aria-modal="true" aria-labelledby="title-pause">

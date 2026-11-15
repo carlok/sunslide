@@ -19,6 +19,7 @@ function syncTiles(time){
     }
     else { T.mFloor.emissiveIntensity=0; T.mWall.emissive.copy(home?C_GOLDE:C_BLACK); }
   }
+  syncTileBatchUniforms();
 }
 function syncEcology(){
   if(!ecologyState) return;
@@ -180,4 +181,12 @@ function syncScene(time,dt){
   pMat.uniforms.uPx.value=ffMat.uniforms.uPx.value=glc.height/(2*Math.tan(camera.fov*DEG/2));
 }
 let useBloom=true;
-function render(){ if(useBloom) composer.render(); else renderer.render(scene,camera); }
+function render(){
+  renderer.info.autoReset=false;
+  renderer.info.reset();
+  if(sunL.castShadow) renderer.shadowMap.needsUpdate=shouldUpdateShadowMap({shadowsEnabled:true,gameState:state,paused,tilesAnimating:tiles.some(t=>t.anim)});
+  if(useBloom&&composer) composer.render();
+  else if(useBloom&&!composer) { ensurePostPipeline(); renderer.render(scene,camera); }
+  else renderer.render(scene,camera);
+  lastFrameDrawCalls=renderer.info.render.calls;
+}

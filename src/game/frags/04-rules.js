@@ -1,7 +1,7 @@
 function slotDist(a,b){ const dc=Math.abs(a.c-b.c); return Math.min(dc,COLS-dc)+Math.abs(a.r-b.r); }
 function newLevel(){
   if(!ecologyState) ecologyState=createEcologyState(); else clearEcology(ecologyState);
-  for(const T of tiles) disposeTileRender(T);
+  if(typeof resetTileBatches==='function') resetTileBatches();
   tiles=[]; for(let i=0;i<NT;i++) tiles.push(makeTile(i));
   slotGrid=[...Array(ROWS)].map(()=>Array(COLS).fill(-1));
   let k=0; for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){ if(r===3&&c===3) continue; slotGrid[r][c]=k; tiles[k].slot={c,r}; k++; }
@@ -275,6 +275,7 @@ function gameOver(){
   $('tBlock').classList.add('hide'); $('oBlock').classList.remove('hide'); $('ov').classList.remove('hide');
 }
 function startGame(){
+  if(useBloom&&typeof ensurePostPipeline==='function') ensurePostPipeline();
   score=0; lives=3; level=1; nextLife=CFG.lifeEvery; newLevel();
   state='play'; readyT=1.6; invuln=2; zoomT=1; perfStart=performance.now();
   $('ov').classList.add('hide'); say('READY',1200); SFX.start();

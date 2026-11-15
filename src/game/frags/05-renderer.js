@@ -3,7 +3,7 @@ let renderer;
 try{ renderer=new THREE.WebGLRenderer({canvas:glc,antialias:true,powerPreference:'high-performance'}); }
 catch(e){ window.__ssFail('This browser has no WebGL, which Sunslide needs.'); throw e; }
 renderer.toneMapping=THREE.ACESFilmicToneMapping; renderer.toneMappingExposure=1.1;
-renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap; renderer.shadowMap.autoUpdate=false;
 const MAXANI=Math.min(8,renderer.capabilities.getMaxAnisotropy());
 glc.addEventListener('webglcontextlost',e=>{ e.preventDefault(); if(state==='play') setPaused(true); say('Graphics reset by the browser — lowering quality',2500); });
 glc.addEventListener('webglcontextrestored',()=>{ qMode=Math.max(0,qLevel-1); qLevel=qMode; store.set('quality',qMode); location.reload(); });
@@ -32,21 +32,15 @@ function radial(stops,size=128){
 const TEX_GLOW=radial([[0,'rgba(255,255,255,1)'],[0.22,'rgba(255,255,255,.5)'],[1,'rgba(255,255,255,0)']]);
 const additive=(map,color)=>new THREE.SpriteMaterial({map,color,blending:THREE.AdditiveBlending,depthWrite:false,transparent:true});
 
-/* ---------- post-processing ---------- */
-// EffectComposer owns half-float ping-pong targets. Do not pass a multisampled RT
-// (samples>0): on large desktop buffers many GPUs fail MSAA resolve and show black macro-tiles.
-const composer=new EffectComposer(renderer);
-composer.addPass(new RenderPass(scene,camera));
-const bloom=new UnrealBloomPass(new THREE.Vector2(256,256),0.45,0.35,1.0);
-composer.addPass(bloom); composer.addPass(new OutputPass());
+/* ---------- post-processing (lazy — see lazy-post.js + ensurePostPipeline) ---------- */
 
 /* ---------- lights ---------- */
 const sunL=new THREE.DirectionalLight('#fff0d9',3.3);
-sunL.castShadow=true; sunL.shadow.mapSize.set(2048,2048);
-{ const c=sunL.shadow.camera; c.left=-1.12;c.right=1.12;c.top=1.12;c.bottom=-1.12;c.near=3.6;c.far=6.5;c.updateProjectionMatrix(); }
+sunL.castShadow=true; sunL.shadow.mapSize.set(1024,1024);
+{ const c=sunL.shadow.camera; c.left=SHADOW_FRUSTUM.left;c.right=SHADOW_FRUSTUM.right;c.top=SHADOW_FRUSTUM.top;c.bottom=SHADOW_FRUSTUM.bottom;c.near=SHADOW_FRUSTUM.near;c.far=SHADOW_FRUSTUM.far;c.updateProjectionMatrix(); }
 sunL.shadow.bias=-0.0005; sunL.shadow.normalBias=0.004;
 scene.add(sunL,sunL.target);
-const moonL=new THREE.DirectionalLight('#8aa0ff',0.75); scene.add(moonL,moonL.target);
+const moonL=new THREE.DirectionalLight('#8aa0ff',0.75); moonL.castShadow=false; scene.add(moonL,moonL.target);
 const ambL=new THREE.AmbientLight('#7080c0',0.55); scene.add(ambL);
 
 /* ---------- sky: stars, sun, moon, atmosphere ---------- */
@@ -93,7 +87,7 @@ scene.add(atmo);
 
 /* ---------- meadow planet, grass blades, flowers, polar forest ---------- */
 function meadowTexture(){
-  const W=1024,H=512,c=document.createElement('canvas'); c.width=W;c.height=H; const g=c.getContext('2d');
+  const W=MEADOW_CANVAS.width,H=MEADOW_CANVAS.height,c=document.createElement('canvas'); c.width=W;c.height=H; const g=c.getContext('2d');
   g.fillStyle='#4a8c35'; g.fillRect(0,0,W,H);
   for(let i=0;i<520;i++){ const x=Math.random()*W,y=Math.random()*H,r=8+Math.random()*40, gr=g.createRadialGradient(x,y,0,x,y,r), l=Math.random()<0.5;
     gr.addColorStop(0,l?'rgba(160,210,90,0.2)':'rgba(15,55,15,0.22)'); gr.addColorStop(1,'rgba(0,0,0,0)'); g.fillStyle=gr; g.fillRect(x-r,y-r,2*r,2*r); }
@@ -181,6 +175,143 @@ vec3 transformed=sR1*(1.0+position.z+uLift);
 #ifdef USE_ALPHAHASH
 vPosition=vec3(position);
 #endif`;
+const SPH_HEAD_BATCH=`
+uniform vec2 uTileOff[${NT}];
+uniform float uTileLift[${NT}];
+varying float vTileId;
+void sphFrame(out vec3 R,out vec3 E,out vec3 Nn){
+  int tid=int(vTileId+0.5);
+  vec2 off=uTileOff[tid];
+  float gx=off.x+position.x, gy=off.y+position.y;
+  float lon=gx*${CW.toFixed(9)}, lat=${LATR.toFixed(9)}-gy*${CH.toFixed(9)};
+  float cl=cos(lat), sl=sin(lat), co=cos(lon), so=sin(lon);
+  R=vec3(cl*so,sl,cl*co); E=vec3(co,0.0,-so); Nn=vec3(-sl*so,cl,-sl*co);
+}`;
+const SPH_NORMAL_BATCH=`vec3 sR0,sE0,sN0; sphFrame(sR0,sE0,sN0);
+vec3 objectNormal=normalize(normal.x*sE0-normal.y*sN0+normal.z*sR0);
+#ifdef USE_TANGENT
+vec3 objectTangent=vec3(tangent.xyz);
+#endif`;
+const SPH_POS_BATCH=`vec3 sR1,sE1,sN1; sphFrame(sR1,sE1,sN1);
+float tileLift=uTileLift[int(vTileId+0.5)];
+vec3 transformed=sR1*(1.0+position.z+tileLift);
+#ifdef USE_ALPHAHASH
+vPosition=vec3(position);
+#endif`;
+const uTileOff=Array.from({length:NT},()=>new THREE.Vector2());
+const uTileLift=new Float32Array(NT);
+const uFloorEmissive=Array.from({length:NT},()=>new THREE.Color());
+const uFloorEmissiveI=new Float32Array(NT);
+const uWallEmissive=Array.from({length:NT},()=>new THREE.Color());
+const uLampEmissive=Array.from({length:NT},()=>new THREE.Color());
+const uLampEmissiveI=new Float32Array(NT);
+const _IDENT_BATCH=new THREE.Matrix4();
+let floorBatch,wallBatch,lampBatch,slabBatch,floorAtlasTex=null;
+let lastFrameDrawCalls=0;
+function wireBatchSphereMat(mat,kind){
+  mat.onBeforeCompile=sh=>{
+    sh.uniforms.uTileOff={value:uTileOff};
+    sh.uniforms.uTileLift={value:uTileLift};
+    sh.vertexShader=sh.vertexShader.replace('#include <common>',`#include <common>\n${SPH_HEAD_BATCH}`)
+      .replace('#include <beginnormal_vertex>',SPH_NORMAL_BATCH)
+      .replace('#include <begin_vertex>',`vTileId=batchId;\n${SPH_POS_BATCH}`);
+    if(kind==='floor'){
+      sh.uniforms.uFloorEmissive={value:uFloorEmissive};
+      sh.uniforms.uFloorEmissiveI={value:uFloorEmissiveI};
+      sh.fragmentShader=sh.fragmentShader.replace('#include <emissivemap_fragment>',`#include <emissivemap_fragment>
+#ifdef USE_BATCHING
+totalEmissiveRadiance=uFloorEmissive[int(vTileId+0.5)]*uFloorEmissiveI[int(vTileId+0.5)];
+#endif`);
+    }else if(kind==='wall'){
+      sh.uniforms.uWallEmissive={value:uWallEmissive};
+      sh.fragmentShader=sh.fragmentShader.replace('#include <emissivemap_fragment>',`#include <emissivemap_fragment>
+#ifdef USE_BATCHING
+totalEmissiveRadiance+=uWallEmissive[int(vTileId+0.5)];
+#endif`);
+    }else if(kind==='lamp'){
+      sh.uniforms.uLampEmissive={value:uLampEmissive};
+      sh.uniforms.uLampEmissiveI={value:uLampEmissiveI};
+      sh.fragmentShader=sh.fragmentShader.replace('#include <emissivemap_fragment>',`#include <emissivemap_fragment>
+#ifdef USE_BATCHING
+totalEmissiveRadiance=uLampEmissive[int(vTileId+0.5)]*uLampEmissiveI[int(vTileId+0.5)];
+#endif`);
+    }
+  };
+  mat.customProgramCacheKey=()=>'sphere-tile-batch-'+kind;
+  return mat;
+}
+function buildFloorAtlas(){
+  const {cols,rows}=atlasGridForCount(NT);
+  const cellW=512,cellH=256,c=document.createElement('canvas');
+  c.width=cols*cellW; c.height=rows*cellH; const g=c.getContext('2d');
+  for(let i=0;i<tiles.length;i++){
+    const tex=floorTexture(tiles[i]), cx=(i%cols)*cellW, cy=Math.floor(i/cols)*cellH;
+    g.drawImage(tex.image,cx,cy,cellW,cellH); tex.dispose();
+  }
+  return canvasTex(c);
+}
+function remapFloorUvs(geo,tileId){
+  const {cols,rows}=atlasGridForCount(NT);
+  const rect=atlasRectForTile(tileId,cols,rows), uv=geo.attributes.uv;
+  if(!uv) return;
+  for(let i=0;i<uv.count;i++){ const m=mapUvToAtlas(uv.getX(i),uv.getY(i),rect); uv.setXY(i,m.u,m.v); }
+  uv.needsUpdate=true;
+}
+function maxTilePartGeos(T){
+  let fv=0,fi=0,wv=0,wi=0,lv=0,li=0,sv=0,si=0;
+  for(let mask=0;mask<32;mask++){
+    const g=tileGeos(T,mask);
+    fv=Math.max(fv,g.floor.attributes.position.count); fi=Math.max(fi,g.floor.getIndex()?.count||0);
+    wv=Math.max(wv,g.walls.attributes.position.count); wi=Math.max(wi,g.walls.getIndex()?.count||0);
+    lv=Math.max(lv,g.lamps.attributes.position.count); li=Math.max(li,g.lamps.getIndex()?.count||0);
+    sv=Math.max(sv,g.slab.attributes.position.count); si=Math.max(si,g.slab.getIndex()?.count||0);
+  }
+  return {floor:{v:fv,i:fi},walls:{v:wv,i:wi},lamps:{v:lv,i:li},slab:{v:sv,i:si}};
+}
+function estimateTilePools(){
+  let fV=0,fI=0,wV=0,wI=0,lV=0,lI=0,sV=0,sI=0;
+  for(const T of tiles){
+    const c=maxTilePartGeos(T);
+    fV+=c.floor.v; fI+=c.floor.i; wV+=c.walls.v; wI+=c.walls.i;
+    lV+=c.lamps.v; lI+=c.lamps.i; sV+=c.slab.v; sI+=c.slab.i;
+  }
+  return {floor:{v:fV+64,i:fI+128},walls:{v:wV+64,i:wI+128},lamps:{v:lV+64,i:lI+128},slab:{v:sV+64,i:sI+128}};
+}
+function resetTileBatches(){
+  if(!floorBatch) return;
+  scene.remove(floorBatch,wallBatch,lampBatch,slabBatch);
+  floorBatch.geometry.dispose(); wallBatch.geometry.dispose(); lampBatch.geometry.dispose(); slabBatch.geometry.dispose();
+  floorBatch.material.dispose(); wallBatch.material.dispose(); lampBatch.material.dispose(); slabBatch.material.dispose();
+  floorAtlasTex?.dispose(); floorAtlasTex=null;
+  floorBatch=wallBatch=lampBatch=slabBatch=null;
+}
+function ensureTileBatches(){
+  if(floorBatch) return;
+  const pools=estimateTilePools();
+  floorAtlasTex=buildFloorAtlas();
+  const floorMat=wireBatchSphereMat(new THREE.MeshStandardMaterial({map:floorAtlasTex,roughness:0.93,emissive:'#000'}),'floor');
+  const wallMat=wireBatchSphereMat(new THREE.MeshStandardMaterial({vertexColors:true,roughness:0.82,emissive:'#000'}),'wall');
+  const lampMat=wireBatchSphereMat(new THREE.MeshStandardMaterial({color:'#fff3cf',emissive:'#ffb24a',emissiveIntensity:1,roughness:0.3}),'lamp');
+  const slabMat=wireBatchSphereMat(new THREE.MeshStandardMaterial({vertexColors:true,roughness:1,shadowSide:THREE.DoubleSide}),'slab');
+  const depthMat=wireBatchSphereMat(new THREE.MeshDepthMaterial({depthPacking:THREE.RGBADepthPacking}),'slab');
+  floorMat.customDepthMaterial=wallMat.customDepthMaterial=slabMat.customDepthMaterial=depthMat;
+  floorBatch=new THREE.BatchedMesh(NT,pools.floor.v,pools.floor.i,floorMat);
+  wallBatch=new THREE.BatchedMesh(NT,pools.walls.v,pools.walls.i,wallMat);
+  lampBatch=new THREE.BatchedMesh(NT,pools.lamps.v,pools.lamps.i,lampMat);
+  slabBatch=new THREE.BatchedMesh(NT,pools.slab.v,pools.slab.i,slabMat);
+  for(const b of [floorBatch,wallBatch,lampBatch,slabBatch]){ b.frustumCulled=false; b.receiveShadow=true; scene.add(b); }
+  floorBatch.castShadow=false; wallBatch.castShadow=slabBatch.castShadow=true; lampBatch.castShadow=false;
+}
+function syncTileBatchUniforms(){
+  if(!floorBatch) return;
+  for(const T of tiles){
+    if(!T.mFloor) continue;
+    uTileOff[T.id].copy(T.uOff.value); uTileLift[T.id]=T.uLift.value;
+    uFloorEmissive[T.id].copy(T.mFloor.emissive); uFloorEmissiveI[T.id]=T.mFloor.emissiveIntensity;
+    uWallEmissive[T.id].copy(T.mWall.emissive);
+    uLampEmissive[T.id].copy(T.mLamp.emissive); uLampEmissiveI[T.id]=T.mLamp.emissiveIntensity;
+  }
+}
 function sphMat(mat,T){
   mat.onBeforeCompile=sh=>{
     sh.uniforms.uOff=T.uOff; sh.uniforms.uLift=T.uLift;
@@ -297,7 +428,7 @@ function tileGeos(T,m){
   return {floor:fl.geo(),walls:wg.geo(),lamps:lg.geo(),slab:sg.geo()};
 }
 function floorTexture(T){
-  const W=512,H=256,c=document.createElement('canvas'); c.width=W;c.height=H; const g=c.getContext('2d');
+  const W=FLOOR_CANVAS.width,H=FLOOR_CANVAS.height,c=document.createElement('canvas'); c.width=W;c.height=H; const g=c.getContext('2d');
   g.fillStyle=PALETTE[T.id]; g.fillRect(0,0,W,H);
   for(let y=0;y<TH;y++) for(let x=0;x<TW;x++){ g.fillStyle=((x+y)&1)?'rgba(255,255,230,0.07)':'rgba(0,30,0,0.07)'; g.fillRect(x*64,y*64,64,64); }
   for(let i=0;i<6500;i++){ g.fillStyle=Math.random()<0.5?'rgba(255,255,220,.13)':'rgba(0,25,0,.16)'; g.fillRect(Math.random()*W,Math.random()*H,1.2,2+Math.random()*4); }
@@ -309,26 +440,41 @@ function floorTexture(T){
   return canvasTex(c);
 }
 function buildTileRender(T){
-  T.tex=floorTexture(T);
-  T.mFloor=new THREE.MeshStandardMaterial({map:T.tex,roughness:0.93,emissive:'#000000'});
+  ensureTileBatches();
+  T.mFloor=new THREE.MeshStandardMaterial({roughness:0.93,emissive:'#000000'});
   T.mWall=new THREE.MeshStandardMaterial({vertexColors:true,roughness:0.82,emissive:'#000000'});
   T.mLamp=new THREE.MeshStandardMaterial({color:'#fff3cf',emissive:'#ffb24a',emissiveIntensity:1,roughness:0.3});
   T.mSlab=new THREE.MeshStandardMaterial({vertexColors:true,roughness:1,shadowSide:THREE.DoubleSide});
-  T.floorMesh=sphMesh(T.mFloor,T,false,true); T.wallMesh=sphMesh(T.mWall,T,true,true);
-  T.lampMesh=sphMesh(T.mLamp,T,false,false); T.slabMesh=sphMesh(T.mSlab,T,true,true);
-  T.group=new THREE.Group(); T.group.add(T.floorMesh,T.wallMesh,T.lampMesh,T.slabMesh); scene.add(T.group);
+  T.group=null; T.floorMesh=T.wallMesh=T.lampMesh=T.slabMesh=null;
   T.geoKey=''; rebuildTile(T);
 }
 function rebuildTile(T){
   const m=seamMask(T), key=m+'_'+T.slot.r; if(key===T.geoKey) return; T.geoKey=key;
   const g=tileGeos(T,m);
-  for(const [mesh,geo] of [[T.floorMesh,g.floor],[T.wallMesh,g.walls],[T.lampMesh,g.lamps],[T.slabMesh,g.slab]]){ mesh.geometry.dispose(); mesh.geometry=geo; }
+  remapFloorUvs(g.floor,T.id);
+  if(T.batchFloorId==null){
+    const cap=maxTilePartGeos(T);
+    T.batchFloorId=floorBatch.addGeometry(g.floor,cap.floor.v,cap.floor.i);
+    T.batchWallId=wallBatch.addGeometry(g.walls,cap.walls.v,cap.walls.i);
+    T.batchLampId=lampBatch.addGeometry(g.lamps,cap.lamps.v,cap.lamps.i);
+    T.batchSlabId=slabBatch.addGeometry(g.slab,cap.slab.v,cap.slab.i);
+    for(const[b,id] of [[floorBatch,T.batchFloorId],[wallBatch,T.batchWallId],[lampBatch,T.batchLampId],[slabBatch,T.batchSlabId]])
+      b.setMatrixAt(id,_IDENT_BATCH);
+  }else{
+    floorBatch.setGeometryAt(T.batchFloorId,g.floor);
+    wallBatch.setGeometryAt(T.batchWallId,g.walls);
+    lampBatch.setGeometryAt(T.batchLampId,g.lamps);
+    slabBatch.setGeometryAt(T.batchSlabId,g.slab);
+  }
 }
-function refreshTiles(){ for(const T of tiles) if(T.group) rebuildTile(T); }
+function refreshTiles(){ for(const T of tiles) if(T.batchFloorId!=null) rebuildTile(T); }
 function disposeTileRender(T){
-  if(!T.group) return; scene.remove(T.group);
-  for(const mesh of T.group.children){ mesh.geometry.dispose(); mesh.material.dispose(); if(mesh.customDepthMaterial) mesh.customDepthMaterial.dispose(); }
-  T.tex.dispose(); T.group=null;
+  if(T.batchFloorId==null) return;
+  floorBatch.setVisibleAt(T.batchFloorId,false);
+  wallBatch.setVisibleAt(T.batchWallId,false);
+  lampBatch.setVisibleAt(T.batchLampId,false);
+  slabBatch.setVisibleAt(T.batchSlabId,false);
+  T.batchFloorId=T.batchWallId=T.batchLampId=T.batchSlabId=null;
 }
 
 /* ---------- bubbles & sunstones ---------- */

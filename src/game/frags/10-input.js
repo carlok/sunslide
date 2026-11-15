@@ -2,6 +2,7 @@ function setPaused(p){
   if(p&&state!=='play'&&state!=='dying'&&state!=='warp') return;
   paused=p; renderedPaused=false; $('pause').classList.toggle('hide',!p); syncButtons();
   if(AUD.ac){ try{ p?AUD.ac.suspend():AUD.ac.resume(); }catch(e){} }
+  if(typeof wakeRenderLoop==='function') wakeRenderLoop();
 }
 function setView(far){ viewFar=far; store.set('viewFar',far); syncButtons(); }
 function setMuted(m){ AU.muted=m; store.set('muted',m); if(AUD.ac) AUD.sfx.gain.value=m?0:1; syncButtons(); }
@@ -102,4 +103,8 @@ $('sBtn').addEventListener('click',()=>setMuted(!AU.muted));
 $('vBtn').addEventListener('click',()=>setView(!viewFar));
 $('restart').addEventListener('click',()=>{ setPaused(false); startGame(); });
 $('qBtn').addEventListener('click',()=>{ const order=['auto',2,1,0]; qMode=order[(order.indexOf(qMode)+1)%order.length]; store.set('quality',qMode); qLevel=qMode==='auto'?2:qMode; perfStart=performance.now(); applyQuality(); });
-document.addEventListener('visibilitychange',()=>{ if(document.hidden&&(state==='play'||state==='warp')) setPaused(true); });
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden){ if(state==='play'||state==='warp') setPaused(true); return; }
+  if(typeof onDocumentVisible==='function') onDocumentVisible();
+  if(typeof wakeRenderLoop==='function') wakeRenderLoop();
+});

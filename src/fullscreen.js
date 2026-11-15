@@ -45,7 +45,7 @@ function tryFullscreenFromGesture() {
 }
 
 function bindStartButtons() {
-  for (const id of ['go', 'again']) {
+  for (const id of ['go', 'again', 'winAgain']) {
     const el = document.getElementById(id);
     if (el) el.addEventListener('click', armFullscreenSession, true);
   }

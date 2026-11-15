@@ -43,6 +43,9 @@ import {
   decorTangentScale,
   cellFootprintTangent,
 } from './src/logic/ecology.js';
+import { createHaptics } from './src/logic/haptics.js';
+
+const haptics = createHaptics();
 
 window.__ssBoot = true;
 

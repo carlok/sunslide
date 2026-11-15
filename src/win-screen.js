@@ -1,4 +1,10 @@
-import { commitRunBest, formatRunTime, formatBestLine, normalizeRunRecord } from './logic/run-best.js';
+import {
+  commitRunBest,
+  formatRunTime,
+  formatBestLine,
+  normalizeRunRecord,
+  loadStoredRunBest,
+} from './logic/run-best.js';
 import { store } from './logic/store.js';
 
 /**
@@ -22,7 +28,7 @@ export function initWinScreen(handlers) {
   const bestline = document.getElementById('bestline');
 
   function refreshTitleBest() {
-    if (bestline) bestline.textContent = formatBestLine(store.get('best', null));
+    if (bestline) bestline.textContent = formatBestLine(loadStoredRunBest(store));
   }
 
   function hide() {

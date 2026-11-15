@@ -42,7 +42,7 @@ import {
   decorTangentScale,
   cellFootprintTangent,
 } from './src/logic/ecology.js';
-import { formatBestLine } from './src/logic/run-best.js';
+import { formatBestLine, loadStoredRunBest } from './src/logic/run-best.js';
 
 window.__ssBoot = true;
 
@@ -52,7 +52,7 @@ export function startSunslide() {
   newLevel();
   applyQuality();
   const bestEl = document.getElementById('bestline');
-  if (bestEl) bestEl.textContent = formatBestLine(store.get('best', null));
+  if (bestEl) bestEl.textContent = formatBestLine(loadStoredRunBest(store));
   window.__sunslide = {
     get state() { return state; },
     update,

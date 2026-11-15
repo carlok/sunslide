@@ -228,6 +228,25 @@ try {
     await page.click('#go', { timeout: 15_000, noWaitAfter: true });
     await page.waitForTimeout(800);
 
+    if (name === 'desktop') {
+      const starsHud = await page.evaluate(() => {
+        const hook = window.__sunslide?.showClearStarsForTest;
+        if (!hook) return { ok: false, why: 'missing showClearStarsForTest' };
+        const r = hook({ moves: 9, par: 12, sector: 1, stars: 2 });
+        const panel = document.getElementById('clearStars');
+        return {
+          ok:
+            r.visible &&
+            r.stars === 2 &&
+            r.row === '★★☆' &&
+            panel?.getAttribute('role') === 'status',
+          r,
+        };
+      });
+      if (!starsHud.ok) fail(`desktop: sector stars overlay ${JSON.stringify(starsHud)}`);
+      await page.evaluate(() => window.__ssHideClearStars?.());
+    }
+
     const simTicks = large ? Math.min(SIM_TICKS, 2800) : SIM_TICKS;
     const res = await page.evaluate(
       ({ ticks }) => {

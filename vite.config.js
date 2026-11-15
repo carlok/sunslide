@@ -43,6 +43,12 @@ import {
   decorTangentScale,
   cellFootprintTangent,
 } from './src/logic/ecology.js';
+import {
+  computeParMoves,
+  starsForMoves,
+  formatStarRow,
+  recordSectorStars,
+} from './src/logic/sector-stars.js';
 
 window.__ssBoot = true;
 
@@ -56,6 +62,22 @@ export function startSunslide() {
   window.__sunslide = {
     get state() { return state; },
     update,
+    showClearStarsForTest(o = {}) {
+      const payload = {
+        sector: o.sector ?? level,
+        moves: o.moves ?? runMoves,
+        par: o.par ?? sectorPar,
+        stars:
+          o.stars ?? starsForMoves(o.moves ?? runMoves, o.par ?? sectorPar ?? 12),
+      };
+      if (typeof window.__ssShowClearStars === 'function') window.__ssShowClearStars(payload);
+      const el = document.getElementById('clearStars');
+      return {
+        visible: !!(el && !el.classList.contains('hide')),
+        stars: payload.stars,
+        row: document.getElementById('starRow')?.textContent,
+      };
+    },
     startGame,
     trySlide,
     get bats() { return bats; },

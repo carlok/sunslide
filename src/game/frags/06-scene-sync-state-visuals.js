@@ -7,11 +7,19 @@ function syncTiles(time){
     T.mLamp.emissive.copy(home?C_LAMPHOME:C_LAMP); T.mLamp.emissiveIntensity=home?2.4:0.08+3.2*(1-L)*(1-L);
     T.mWall.color.copy(home?C_GOLDWALL:C_WHITE); T.mWall.emissive.copy(home?C_GOLDE:C_BLACK);
     const age=T.cleared?gameClock-T.clearedAt:99;
+    const ghost=slidePreview&&slidePreview.id===T.id&&!T.anim;
     if(age<2.5){ T.mFloor.emissive.copy(C_BLOOM); T.mFloor.emissiveIntensity=0.35*(1-age/2.5); }
-    else if(T.id===padSel){ T.mFloor.emissive.copy(L>=CFG.slideLight?C_WHITE:C_HIDARK); T.mFloor.emissiveIntensity=0.22+0.12*Math.sin(time*8); }
-    else if(elig.has(T.id)){ const lit=L>=CFG.slideLight; T.mFloor.emissive.copy(lit?C_HI:C_HIDARK); T.mFloor.emissiveIntensity=(lit?0.2:0.1)*(0.5+0.5*Math.sin(time*5)); }
-    else T.mFloor.emissiveIntensity=0;
+    else if(ghost){ const lit=L>=CFG.slideLight; T.mFloor.emissive.copy(lit?C_HI:C_HIDARK); T.mFloor.emissiveIntensity=ghostEmissiveIntensity(slidePreview.pull,REDUCED)*(lit?1:0.85); T.mWall.emissive.copy(lit?C_GOLDE:C_HIDARK); T.mWall.emissiveIntensity=0.06+0.12*ghostPreviewBlend(slidePreview.pull,REDUCED); }
+  else if(T.id===padSel){ T.mFloor.emissive.copy(L>=CFG.slideLight?C_WHITE:C_HIDARK); T.mFloor.emissiveIntensity=0.22+0.12*Math.sin(time*8); }
+    else if(elig.has(T.id)){
+      const lit=L>=CFG.slideLight;
+      T.mFloor.emissive.copy(lit?C_HI:C_HIDARK);
+      T.mFloor.emissiveIntensity=movableHighlightIntensity(time,lit,REDUCED)*(lit?1:0.9);
+      T.mWall.emissive.copy(lit?C_GOLDE:C_HIDARK); T.mWall.emissiveIntensity=lit?0.06+0.05*Math.sin(time*4.5):0.03;
+    }
+    else { T.mFloor.emissiveIntensity=0; T.mWall.emissive.copy(home?C_GOLDE:C_BLACK); }
   }
+  syncTileBatchUniforms();
 }
 function syncEcology(){
   if(!ecologyState) return;
@@ -140,7 +148,7 @@ function updateCameraTarget(dt){
   else {
     const w=actorWorld(player), k=Math.min(1,dt*(state==='warp'?(REDUCED?3:4):(REDUCED?3:5)));
     camLon=mod(camLon+angD(gx2lon(w[0])-camLon)*k,TAU); camLat+=(gy2lat(w[1])-camLat)*k;
-    zoomTarget=state==='clear'?1:(viewFar?1:(state==='play'&&readyT>1.0?1:(state==='warp'&&warpT>0.25&&warpT<1.25?1:0)));
+    zoomTarget=state==='win'?1:(viewFar?1:(state==='play'&&readyT>1.0?1:(state==='warp'&&warpT>0.25&&warpT<1.25?1:0)));
   }
   zoomT+=(zoomTarget-zoomT)*Math.min(1,dt*(REDUCED?6:(state==='warp'?4.5:2.4)));
 }
@@ -173,4 +181,12 @@ function syncScene(time,dt){
   pMat.uniforms.uPx.value=ffMat.uniforms.uPx.value=glc.height/(2*Math.tan(camera.fov*DEG/2));
 }
 let useBloom=true;
-function render(){ if(useBloom) composer.render(); else renderer.render(scene,camera); }
+function render(){
+  renderer.info.autoReset=false;
+  renderer.info.reset();
+  if(sunL.castShadow) renderer.shadowMap.needsUpdate=shouldUpdateShadowMap({shadowsEnabled:true,gameState:state,paused,tilesAnimating:tiles.some(t=>t.anim)});
+  if(useBloom&&composer) composer.render();
+  else if(useBloom&&!composer) { ensurePostPipeline(); renderer.render(scene,camera); }
+  else renderer.render(scene,camera);
+  lastFrameDrawCalls=renderer.info.render.calls;
+}

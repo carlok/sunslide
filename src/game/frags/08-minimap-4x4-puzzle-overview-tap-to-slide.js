@@ -46,7 +46,7 @@ function mapIsland(T,sx,sy,elig,time){
   if(waypoint===T.id){ g.lineWidth=2.4*k; g.strokeStyle='#ff7fb8'; g.setLineDash([4*k,2.5*k]); g.lineDashOffset=-time*12*k; rrect(g,x-1.5*k,y-1.5*k,w+3*k,h+3*k,5*k); g.stroke(); g.setLineDash([]); }
   if(T.id===padSelectedId()){ g.lineWidth=3*k; g.strokeStyle='#ffffff'; rrect(g,x-2*k,y-2*k,w+4*k,h+4*k,6*k); g.stroke(); }
   if(elig){ const lit=lightSlot(T.slot.c,T.slot.r)>=CFG.slideLight; g.lineWidth=2*k;
-    g.strokeStyle=lit?`rgba(255,210,94,${(0.55+0.45*Math.sin(time*5)).toFixed(3)})`:'rgba(127,140,255,0.85)';
+    g.strokeStyle=lit?`${mapEligLitPrefix}${(0.55+0.45*Math.sin(time*5)).toFixed(3)})`:mapEligDarkStroke;
     if(!lit) g.setLineDash([3*k,3*k]); rrect(g,x-1*k,y-1*k,w+2*k,h+2*k,5*k); g.stroke(); g.setLineDash([]); }
   g.textAlign='center'; g.textBaseline='middle';
 }

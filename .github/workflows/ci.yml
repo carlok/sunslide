@@ -25,7 +25,7 @@ jobs:
       - run: npm run test:unit
       - name: Smoke test
         env:
-          SMOKE_TIMEOUT_MS: 420000
+          SMOKE_TIMEOUT_MS: 510000
         run: npm run test:smoke
       - name: Upload coverage report
         if: always()

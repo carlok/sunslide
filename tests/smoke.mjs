@@ -122,6 +122,11 @@ try {
     });
     await ctx.addInitScript(() => {
       window.__ssSmokeNoFullscreen = true;
+      try {
+        localStorage.setItem('sunslide.tutorialSeen', JSON.stringify(true));
+      } catch {
+        /* private mode */
+      }
     });
     const page = await ctx.newPage();
     page.setDefaultTimeout(60_000);
@@ -133,6 +138,10 @@ try {
     });
   // 'load' only — networkidle can hang on WebGL / rAF; gameplay readiness uses __sunslide.
     await page.goto(baseUrl, { waitUntil: 'load', timeout: 60_000 });
+    const debugLeak = await page.evaluate(
+      () => !!document.getElementById('debugOverlay'),
+    );
+    if (debugLeak) fail(`${name}: debug overlay must not load without ?debug`);
     await page.waitForFunction(() => !!window.__sunslide, null, { timeout: 30_000 });
 
     const menu = await page.evaluate(async () => {
@@ -155,7 +164,8 @@ try {
       );
       const outside =
         btn.getAttribute('aria-expanded') === 'false' && panel.classList.contains('hide');
-      return { ok: open && closed && open2 && outside, open, closed, open2, outside };
+      const settings = !!document.getElementById('menuSettings');
+      return { ok: open && closed && open2 && outside && settings, open, closed, open2, outside, settings };
     });
     if (!menu.ok) fail(`${name}: hamburger menu ${JSON.stringify(menu)}`);
     await page.evaluate(() => {
@@ -211,6 +221,34 @@ try {
         };
       });
       if (!mapPersist.ok) fail(`${name}: map preference not persisted ${JSON.stringify(mapPersist)}`);
+      const touch = await page.evaluate((min) => {
+        const ids = ['menuBtn', 'go', 'mapToggle', 'bPause', 'bMus', 'bView2'];
+        const out = [];
+        for (const id of ids) {
+          const el = document.getElementById(id);
+          if (!el) continue;
+          if (id === 'mapToggle' && !el.classList.contains('map-toggle-active')) continue;
+          const r = el.getBoundingClientRect();
+          out.push({
+            id,
+            w: r.width,
+            h: r.height,
+            ok: r.width >= min && r.height >= min,
+          });
+        }
+        document.querySelectorAll('#pad button').forEach((el, i) => {
+          const r = el.getBoundingClientRect();
+          out.push({
+            id: el.id || `pad-${i}`,
+            w: r.width,
+            h: r.height,
+            ok: r.width >= min && r.height >= min,
+          });
+        });
+        const bad = out.filter((x) => !x.ok);
+        return { ok: bad.length === 0, bad, out };
+      }, 44);
+      if (!touch.ok) fail(`${name}: touch targets under 44px ${JSON.stringify(touch.bad)}`);
     }
 
     await page.evaluate((q) => window.__sunslide.setQuality(q), quality ?? 1);
@@ -225,7 +263,24 @@ try {
       return { ok: top === go || go.contains(top), top: top?.id || top?.tagName };
     });
     if (!playClick.ok) fail(`${name}: #go not top element before click ${JSON.stringify(playClick)}`);
-    await page.click('#go', { timeout: 15_000, noWaitAfter: true });
+    const playOpts = { timeout: 20_000, noWaitAfter: true };
+    try {
+      await page.click('#go', playOpts);
+    } catch (e) {
+      if (e.name !== 'TimeoutError') throw e;
+      const retryHit = await page.evaluate(() => {
+        const go = document.getElementById('go');
+        if (!go) return { ok: false, why: 'missing #go' };
+        const r = go.getBoundingClientRect();
+        const cy = Math.min(Math.max(r.top + r.height / 2, 1), innerHeight - 1);
+        const cx = Math.min(Math.max(r.left + r.width / 2, 1), innerWidth - 1);
+        const top = document.elementFromPoint(cx, cy);
+        return { ok: top === go || go.contains(top), top: top?.id || top?.tagName };
+      });
+      if (!retryHit.ok) fail(`${name}: #go covered after click timeout ${JSON.stringify(retryHit)}`);
+      await page.waitForTimeout(300);
+      await page.click('#go', playOpts);
+    }
     await page.waitForTimeout(800);
 
     if (name === 'desktop') {
@@ -262,6 +317,39 @@ try {
         };
       });
       if (!greenHud.ok) fail(`desktop: planet green HUD ${JSON.stringify(greenHud)}`);
+      const winCheck = await page.evaluate(() => {
+        const hook = window.__sunslide?.showWinForTest;
+        if (!hook) return { ok: false, why: 'missing showWinForTest' };
+        const r = hook({ moves: 7, timeMs: 9100, homes: 9, greened: 4 });
+        const wBlock = document.getElementById('wBlock');
+        const again = document.getElementById('winAgain');
+        const menu = document.getElementById('winMenu');
+        const announce = document.getElementById('winAnnounce');
+        const ar = again?.getBoundingClientRect();
+        const mr = menu?.getBoundingClientRect();
+        return {
+          ok:
+            r.dialogOpen &&
+            wBlock?.getAttribute('role') === 'dialog' &&
+            document.getElementById('winMoves')?.textContent === '7' &&
+            (announce?.textContent?.includes('Sector clear') ?? false) &&
+            ar &&
+            Math.min(ar.width, ar.height) >= 44 &&
+            mr &&
+            Math.min(mr.width, mr.height) >= 44,
+          r,
+          announce: announce?.textContent,
+        };
+      });
+      if (!winCheck.ok) fail(`desktop: win screen ${JSON.stringify(winCheck)}`);
+      await page.click('#winMenu');
+      await page.waitForFunction(
+        () =>
+          document.getElementById('tBlock') &&
+          !document.getElementById('tBlock').classList.contains('hide'),
+      );
+      await page.click('#go');
+      await page.waitForTimeout(400);
     }
 
     const simTicks = large ? Math.min(SIM_TICKS, 2800) : SIM_TICKS;
@@ -360,6 +448,13 @@ try {
     if (layout.overflowX || layout.overflowY) fail(`${name}: page overflows the viewport`);
 
     if (large) {
+      await page.waitForFunction(
+        () => {
+          const m = window.__sunslide?.getRenderMetrics?.();
+          return m && (!m.useBloom || m.postPipelineReady);
+        },
+        { timeout: 20_000 },
+      );
       await page.evaluate(() => {
         const S = window.__sunslide;
         for (let i = 0; i < 150; i++) S.update(1 / 60);

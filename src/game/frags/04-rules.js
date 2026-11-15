@@ -1,7 +1,7 @@
 function slotDist(a,b){ const dc=Math.abs(a.c-b.c); return Math.min(dc,COLS-dc)+Math.abs(a.r-b.r); }
 function newLevel(){
   if(!ecologyState) ecologyState=createEcologyState(); else clearEcology(ecologyState);
-  for(const T of tiles) disposeTileRender(T);
+  if(typeof resetTileBatches==='function') resetTileBatches();
   tiles=[]; for(let i=0;i<NT;i++) tiles.push(makeTile(i));
   slotGrid=[...Array(ROWS)].map(()=>Array(COLS).fill(-1));
   let k=0; for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){ if(r===3&&c===3) continue; slotGrid[r][c]=k; tiles[k].slot={c,r}; k++; }
@@ -60,6 +60,7 @@ function eatAt(t,x,y){
     markBubbleCollected(ecologyState,t,x,y,gameClock);
     maybeCelebratePlanetGreen();
     combo=comboT<CFG.comboWin?combo+1:1; comboT=0;
+    haptics.bubbleCollect();
     addScore((10+Math.min(20,(combo-1)*2))*mult); SFX.pop(combo-1); emit(pos,10,PC.bubble,0.2,0.007,0.45,0.25);
     if(combo>=5&&combo%5===0){ floatAt(pos,'combo ×'+combo,'#7fe8ff'); if(combo%20===0) say('Combo ×'+combo+'!',900); }
   }
@@ -201,10 +202,15 @@ function collide(){
     }
   }
 }
-function rumble(ms,strong,weak){
+function gamepadRumble(ms,strong,weak){
   try{ const gp=PAD.idx>=0&&navigator.getGamepads?navigator.getGamepads()[PAD.idx]:null, va=gp&&gp.vibrationActuator;
     if(va&&va.playEffect) va.playEffect('dual-rumble',{duration:ms,strongMagnitude:strong,weakMagnitude:weak}).catch(()=>{});
-    else if(navigator.vibrate&&matchMedia('(pointer:coarse)').matches) navigator.vibrate(Math.round(ms*0.6));
+  }catch(e){}
+}
+function rumble(ms,strong,weak){
+  gamepadRumble(ms,strong,weak);
+  try{
+    if(navigator.vibrate&&matchMedia('(pointer:coarse)').matches) navigator.vibrate(Math.round(ms*0.6));
   }catch(e){}
 }
 function die(){
@@ -227,11 +233,12 @@ function trySlide(c,r){
   let dc=h.c-c; if(dc>2) dc-=COLS; if(dc<-2) dc+=COLS;
   T.anim={t:0,fc:c,fr:r,dc,dr:h.r-r};
   slotGrid[h.r][h.c]=id; slotGrid[r][c]=-1; T.slot={c:h.c,r:h.r};
+  runMoves++;
   SFX.slide(); refreshTiles();
   return '';
 }
 function onSlideEnd(T){
-  refreshTiles(); SFX.thump(); dustAround(T); shakeT=Math.max(shakeT,0.2); rumble(90,0.5,0.2);
+  refreshTiles(); SFX.thump(); dustAround(T); shakeT=Math.max(shakeT,0.2); gamepadRumble(90,0.5,0.2); haptics.tileLock();
   if(isHome(T)&&!T.homeAwarded){
     T.homeAwarded=true; addScore(250); SFX.home();
     const hasBat=bats.some(g=>g.home===T.id);
@@ -243,10 +250,11 @@ function onSlideEnd(T){
 }
 function update(dt){
   gameClock+=dt;
+  if(state==='play'||state==='warp'||state==='dying') runTimeMs+=dt*1000;
   sunLon=mod(sunLon-dt*TAU/dayLen(),TAU);
   shakeT=Math.max(0,shakeT-dt);
   cooldown=Math.max(0,cooldown-dt);
-  for(const T of tiles) if(T.anim){ T.anim.t+=dt/CFG.slideT; if(T.anim.t>=1){ T.anim=null; cooldown=CFG.slideCool; onSlideEnd(T); } }
+  for(const T of tiles) if(T.anim){ T.anim.t+=dt/slideSnapDurationSeconds(REDUCED); if(T.anim.t>=1){ T.anim=null; cooldown=CFG.slideCool; onSlideEnd(T); } }
   for(const g of bats) g.asleep=isHome(tiles[g.home]);
   if(state==='play'){
     if(readyT>0) readyT-=dt;
@@ -266,10 +274,6 @@ function update(dt){
   } else if(state==='dying'){
     dyingT-=dt;
     if(dyingT<=0){ lives--; if(lives<=0) gameOver(); else { resetActors(); state='play'; readyT=1.0; invuln=2.5; say('READY',900); } }
-  } else if(state==='clear'){
-    clearT-=dt;
-    if(Math.random()<dt*7){ const d=new THREE.Vector3(Math.random()*2-1,Math.random()*2-1,Math.random()*2-1).normalize().multiplyScalar(1.12); emit(d,30,[PC.gold[0],PC.teal[0],PC.bubble[1]],0.3,0.013,1.1,0.05); }
-    if(clearT<=0){ level++; newLevel(); state='play'; readyT=1.6; invuln=2; zoomT=1; say('SECTOR '+level,1300); }
   }
   updateCameraTarget(dt);
 }
@@ -290,16 +294,37 @@ function maybeCelebratePlanetGreen(){
 }
 function levelClear(){
   maybeCelebratePlanetGreen();
-  state='clear'; clearT=2.8; addScore(1000); if(!deaths) addScore(1000); say('SECTOR CLEARED +1000'+(deaths?'':' · Flawless +1000'),2400); SFX.clear();
+  state='win';
+  addScore(1000);
+  if(!deaths) addScore(1000);
+  SFX.clear();
+  const stats={
+    moves:runMoves,
+    timeMs:Math.round(runTimeMs),
+    homes:tiles.filter(isHome).length,
+    greened:ecologyCount(ecologyState),
+    level,
+  };
+  if(typeof window.__ssShowWin==='function') window.__ssShowWin(stats);
+  else say('SECTOR CLEARED +1000'+(deaths?'':' · Flawless +1000'),2400);
 }
 function gameOver(){
   state='over';
-  if(score>best){ best=score; store.set('best',best); }
-  $('res').innerHTML='Score <b>'+score+'</b> &middot; Sector <b>'+level+'</b><br>Best <b>'+best+'</b>';
-  $('tBlock').classList.add('hide'); $('oBlock').classList.remove('hide'); $('ov').classList.remove('hide');
+  if(score>scoreBest){ scoreBest=score; store.set('scoreBest',scoreBest); }
+  $('res').innerHTML='Score <b>'+score+'</b> &middot; Sector <b>'+level+'</b><br>Best score <b>'+scoreBest+'</b>';
+  $('tBlock').classList.add('hide'); $('oBlock').classList.remove('hide'); $('wBlock').classList.add('hide'); $('ov').classList.remove('hide');
+}
+function goTitle(){
+  state='title'; paused=false;
+  $('ov').classList.remove('hide');
+  $('tBlock').classList.remove('hide');
+  $('oBlock').classList.add('hide');
+  $('wBlock').classList.add('hide');
+  $('pause').classList.add('hide');
 }
 function startGame(){
-  score=0; lives=3; level=1; nextLife=CFG.lifeEvery; newLevel();
+  if(useBloom&&typeof ensurePostPipeline==='function') ensurePostPipeline();
+  score=0; lives=3; level=1; nextLife=CFG.lifeEvery; runMoves=0; runTimeMs=0; deaths=0; newLevel();
   state='play'; readyT=1.6; invuln=2; zoomT=1; perfStart=performance.now();
-  $('ov').classList.add('hide'); say('READY',1200); SFX.start();
+  $('ov').classList.add('hide'); $('wBlock').classList.add('hide'); say('READY',1200); SFX.start();
 }

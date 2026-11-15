@@ -133,6 +133,10 @@ try {
     });
   // 'load' only — networkidle can hang on WebGL / rAF; gameplay readiness uses __sunslide.
     await page.goto(baseUrl, { waitUntil: 'load', timeout: 60_000 });
+    const debugLeak = await page.evaluate(
+      () => !!document.getElementById('debugOverlay'),
+    );
+    if (debugLeak) fail(`${name}: debug overlay must not load without ?debug`);
     await page.waitForFunction(() => !!window.__sunslide, null, { timeout: 30_000 });
 
     const menu = await page.evaluate(async () => {

@@ -154,7 +154,7 @@ $('resume').addEventListener('click',()=>setPaused(false));
 $('sBtn').addEventListener('click',()=>setMuted(!AU.muted));
 $('vBtn').addEventListener('click',()=>setView(!viewFar));
 $('restart').addEventListener('click',()=>{ setPaused(false); startGame(); });
-$('qBtn').addEventListener('click',()=>{ const order=['auto',2,1,0]; qMode=order[(order.indexOf(qMode)+1)%order.length]; store.set('quality',qMode); qLevel=qLevelFor(qMode); perfStart=performance.now(); applyQuality(); });
+$('qBtn').addEventListener('click',()=>{ const order=['auto',2,1,0]; qMode=order[(order.indexOf(qMode)+1)%order.length]; store.set('quality',qMode); qLevel=qLevelFor(qMode); perfRestart(); applyQuality(); });
 document.addEventListener('visibilitychange',()=>{
   if(document.hidden){
     if(state==='play'||state==='warp'||state==='dying') setPaused(true);

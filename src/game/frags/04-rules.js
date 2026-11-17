@@ -334,7 +334,7 @@ function startGame(){
   score=0; lives=3; level=1; nextLife=CFG.lifeEvery; runMoves=0; runTimeMs=0; deaths=0; newLevel();
   if(typeof window.__ssHideClearStars==='function') window.__ssHideClearStars();
   if(typeof window.__ssRefreshTitleStars==='function') window.__ssRefreshTitleStars();
-  state='play'; readyT=1.6; invuln=2; zoomT=1; perfStart=performance.now();
+  state='play'; readyT=1.6; invuln=2; zoomT=1; perfRestart();
   if(typeof refreshShadowMap==='function') refreshShadowMap();
   $('ov').classList.add('hide'); $('wBlock').classList.add('hide'); say(tr('toast.ready'),1200); SFX.start();
   if(typeof syncAmbientGreen==='function') syncAmbientGreen();

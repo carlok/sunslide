@@ -103,6 +103,13 @@ import {
   syncAdaptiveCap,
   tickAdaptiveDpr,
 } from './src/logic/adaptive-pixel-ratio.js';
+import { createFrameCadence, observeFrameCadence } from './src/logic/frame-cadence.js';
+import {
+  createAutoQuality,
+  pauseAutoQuality,
+  restartAutoQuality,
+  tickAutoQuality,
+} from './src/logic/auto-quality.js';
 import { t as tr } from './src/i18n/index.js';
 
 const settingsStore = createStore();
@@ -128,7 +135,7 @@ function applySettings(s) {
   if (s.quality !== undefined) {
     qMode = s.quality;
     qLevel = qLevelFor(s.quality);
-    perfStart = performance.now();
+    perfRestart();
     applyQuality();
   }
   if (s.colorBlind !== undefined) applyColorBlindPalette(s.colorBlind);
@@ -239,7 +246,7 @@ export function startSunslide() {
       readyT = 0;
       invuln = 1e9;
       zoomT = 1;
-      perfStart = performance.now();
+      perfRestart();
       if (typeof refreshShadowMap === 'function') refreshShadowMap();
       $('ov').classList.add('hide');
       $('wBlock').classList.add('hide');
@@ -288,7 +295,7 @@ export function startSunslide() {
     get sunLon() { return sunLon; },
     set sunLon(v) { sunLon = v; },
     get zoom() { return [zoomT, zoomTarget, viewFar]; },
-    setQuality(l) { qMode = l; qLevel = qLevelFor(l); applyQuality(); },
+    setQuality(l) { qMode = l; qLevel = qLevelFor(l); perfRestart(); applyQuality(); },
     get greenedCount() { return ecologyCount(ecologyState); },
     get greenProgress() { return currentGreenPercent(); },
     get initialGreenTarget() { return initialGreenTarget; },
@@ -316,6 +323,8 @@ export function startSunslide() {
         pixelRatio,
         drawCalls: lastFrameDrawCalls,
         adaptiveDpr: adaptiveDprState.current,
+        cadenceMs: frameCadence.ms,
+        autoQuality: autoQ.last,
         stageCss: [stageEl.clientWidth, stageEl.clientHeight],
         canvasBuffer: [glc.width, glc.height],
         composerRT: composer ? [composer.renderTarget1.width, composer.renderTarget1.height] : null,

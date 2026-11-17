@@ -5,8 +5,12 @@ let qMode=store.get('quality','auto'); if(![ 'auto',0,1,2].includes(qMode)) qMod
 const Q_CAP_KEY='sunslide.qCap';
 const Q_CAP=(()=>{ try{ const v=sessionStorage.getItem(Q_CAP_KEY); return v==null?2:clamp(Math.round(+v)||0,0,2); }catch(e){ return 2; } })();
 function qLevelFor(mode){ return Math.min(mode==='auto'?2:mode,Q_CAP); }
-let qLevel=qLevelFor(qMode), pixelRatio=1, perfStart=performance.now(), perfAcc=0, perfN=0, renderedPaused=false;
+let qLevel=qLevelFor(qMode), pixelRatio=1, renderedPaused=false;
 let adaptiveDprState=createAdaptiveDprState({ deviceDpr: window.devicePixelRatio||1 });
+// Display cadence (~16.7 ms at 60 Hz, ~33 ms on 30 Hz panels / Low Power Mode / Energy Saver) and
+// the auto-quality controller that judges frames against it (src/logic/auto-quality.js).
+const frameCadence=createFrameCadence(), autoQ=createAutoQuality();
+restartAutoQuality(autoQ,performance.now());
 function shadowDeviceCtx(){ return { qualityShadow:QUAL[qLevel].shadow, coarsePointer:matchMedia('(pointer: coarse)').matches, hardwareConcurrency:navigator.hardwareConcurrency, deviceMemory:navigator.deviceMemory, viewportWidth:stageEl.clientWidth }; }
 function applyQuality(){
   const q=QUAL[qLevel];
@@ -21,10 +25,14 @@ function applyQuality(){
   blades.geometry.instanceCount=q.blades; flowers.count=q.flowers; ffPts.geometry.setDrawRange(0,q.ff);
   resize(); syncButtons();
 }
-function perfSample(ms){
-  if(qMode!=='auto'||qLevel===0||state!=='play'||paused||uiHold||performance.now()-perfStart<4000){ perfAcc=perfN=0; return; }
-  perfAcc+=ms; if(++perfN>=90){ const avg=perfAcc/perfN; perfAcc=perfN=0; if(avg>24){ qLevel--; applyQuality(); perfStart=performance.now(); } }
+// frameMs: rAF interval; workMs: CPU time of update + render this frame.
+function perfSample(frameMs,workMs){
+  if(qMode!=='auto'||state!=='play'||paused||uiHold){ pauseAutoQuality(autoQ); return; }
+  const next=tickAutoQuality(autoQ,{ nowMs:performance.now(), frameMs, workMs, cadenceMs:frameCadence.ms, level:qLevel, maxLevel:qLevelFor('auto') });
+  if(next!==qLevel){ qLevel=next; applyQuality(); }
 }
+// New run or quality setting change: let the scene settle before judging frames again.
+function perfRestart(){ restartAutoQuality(autoQ,performance.now()); }
 function resize(){
   const w=Math.max(1,stageEl.clientWidth), h=Math.max(1,stageEl.clientHeight), q=QUAL[qLevel];
   const area=w*h, budgetPr=Math.sqrt(q.px/area);
@@ -44,7 +52,7 @@ function resize(){
 }
 new ResizeObserver(()=>resize()).observe(stageEl);
 new ResizeObserver(()=>resize()).observe(mapC);
-let lastT=0, renderLoopActive=false, pendingClockAlign=false;
+let lastT=0, clockRan=false, renderLoopActive=false, pendingClockAlign=false;
 function wakeRenderLoop(){
   if(renderLoopActive) return;
   renderLoopActive=true;
@@ -128,13 +136,22 @@ function frame(ts){
 
   if(pendingClockAlign){ lastT=resumeClockAfterHidden(ts/1000); pendingClockAlign=false; }
   const now=ts/1000;
+  // Raw rAF interval for the quality heuristics, measured only between consecutive running frames so a
+  // pause or hidden tab doesn't read as one long frame; dt is clamped separately for the simulation.
+  const frameMs=plan.advanceClock&&clockRan?(now-lastT)*1000:0;
   const dt=plan.advanceClock?Math.min(0.05,Math.max(0.0001,(now-lastT)||0.016)):0;
   if(plan.advanceClock) lastT=now;
-  if(plan.advanceClock&&!window.__ssSmokeNoFullscreen&&tickAdaptiveDpr(adaptiveDprState,dt*1000)) resize();
-  perfSample(dt*1000);
+  clockRan=plan.advanceClock;
+  if(plan.advanceClock){
+    const cadenceMs=observeFrameCadence(frameCadence,frameMs);
+    if(!window.__ssSmokeNoFullscreen&&tickAdaptiveDpr(adaptiveDprState,dt*1000,cadenceMs)) resize();
+  }
+  const workStart=performance.now();
   pollPad();
   if(plan.simulate&&!held) update(dt);
-  if(!plan.render) return;
-  syncScene(now,dt); render(); drawFx(now,dt); drawMap(now); hud();
-  renderedPaused=held;
+  if(plan.render){
+    syncScene(now,dt); render(); drawFx(now,dt); drawMap(now); hud();
+    renderedPaused=held;
+  }
+  perfSample(frameMs,performance.now()-workStart);
 }

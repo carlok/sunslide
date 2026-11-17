@@ -8,6 +8,12 @@ export const DEFAULT_ADAPTIVE = {
   recoverFps: 52,
   lowHoldMs: 3000,
   highHoldMs: 5000,
+  // Frames within this factor of the display cadence keep pace, whatever their fps: a 30 Hz panel,
+  // iOS Low Power Mode or Chrome Energy Saver deliver ~33 ms frames however cheap the frame is.
+  cadenceSlack: 1.2,
+  // A step down this soon after a step up means the step up didn't hold: double highHoldMs.
+  probationMs: 10000,
+  maxHighHoldMs: 60000,
 };
 
 export function capDevicePixelRatio(deviceDpr, cap = DEFAULT_ADAPTIVE.dprCap) {
@@ -27,9 +33,13 @@ export function createAdaptiveDprState(opts = {}) {
     recoverFps: o.recoverFps,
     lowHoldMs: o.lowHoldMs,
     highHoldMs: o.highHoldMs,
+    cadenceSlack: o.cadenceSlack,
+    probationMs: o.probationMs,
+    maxHighHoldMs: o.maxHighHoldMs,
     current: cap,
     lowAccum: 0,
     highAccum: 0,
+    sinceUpMs: Infinity,
   };
 }
 
@@ -39,12 +49,19 @@ export function syncAdaptiveCap(state, deviceDpr, cap = DEFAULT_ADAPTIVE.dprCap)
   if (state.current < state.floor) state.current = state.floor;
 }
 
-/** @returns {boolean} true when `current` changed (caller should resize). */
-export function tickAdaptiveDpr(state, frameMs) {
+/**
+ * @param {number} frameMs rAF interval for this frame.
+ * @param {number|null} [cadenceMs] display cadence (frame-cadence.js). Without it, fps thresholds
+ *   alone decide, which reads every capped 30 Hz display as slow.
+ * @returns {boolean} true when `current` changed (caller should resize).
+ */
+export function tickAdaptiveDpr(state, frameMs, cadenceMs) {
   const dt = Math.max(0, frameMs);
   const fps = 1000 / Math.max(dt, 0.001);
+  const onPace = cadenceMs > 0 && dt <= cadenceMs * state.cadenceSlack;
+  state.sinceUpMs += dt;
   let changed = false;
-  if (fps < state.targetFps) {
+  if (fps < state.targetFps && !onPace) {
     state.lowAccum += dt;
     state.highAccum = 0;
     if (state.lowAccum >= state.lowHoldMs && state.current > state.floor + 1e-6) {
@@ -53,9 +70,13 @@ export function tickAdaptiveDpr(state, frameMs) {
         Math.round((state.current - state.step) * 1000) / 1000,
       );
       state.lowAccum = 0;
+      if (state.sinceUpMs < state.probationMs) {
+        state.highHoldMs = Math.min(state.maxHighHoldMs, state.highHoldMs * 2);
+      }
+      state.sinceUpMs = Infinity;
       changed = true;
     }
-  } else if (fps >= state.recoverFps) {
+  } else if (fps >= state.recoverFps || onPace) {
     state.highAccum += dt;
     state.lowAccum = 0;
     if (state.highAccum >= state.highHoldMs && state.current < state.cap - 1e-6) {
@@ -64,6 +85,7 @@ export function tickAdaptiveDpr(state, frameMs) {
         Math.round((state.current + state.step) * 1000) / 1000,
       );
       state.highAccum = 0;
+      state.sinceUpMs = 0;
       changed = true;
     }
   } else {

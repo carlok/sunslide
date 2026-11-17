@@ -17,7 +17,7 @@
 | L3 | Look | Bloom pass cost vs marginal benefit on Low/Medium | M | P2 |
 | G1 | GPU | Draw-call batching for instanced decor (eco + bloom) | L | P3 |
 | G2 | GPU | Shadow map tiering (High = 2048 in `QUAL` vs policy cap 1024) — **done**: `QUAL[2].shadow` = 1024 | S | P1 |
-| G3 | GPU | Auto quality step-down threshold (90-frame avg > 24 ms) | S | P2 |
+| G3 | GPU | Auto quality: cadence-aware step-down + re-upgrade with backoff — **done** | S | P2 |
 | G4 | GPU | Pause / menu render idling (`renderIdle` policy) | S | P2 |
 | U1 | UX | Centralise UI copy for forks (`sunslide-ko`) | **M** | **P1** |
 | U2 | UX | Tutorial copy vs HUD toast timing | S | P2 |
@@ -114,9 +114,11 @@ Input paths: keyboard (`10-input.js`), pointer map, gamepad standard mapping (`1
 
 ### G3 — Auto quality backoff (P2, small)
 
-**Finding:** `perfSample()` drops one Q level when 90-frame average **> 24 ms** (`11-quality-sizing-loop.js`). No hysteresis (re-upgrade).
+**Finding:** `perfSample()` dropped one Q level when the 90-frame average was **> 24 ms** and never stepped back up. Inter-frame time is not render cost: 30 Hz panels, iOS Low Power Mode and Chrome Energy Saver deliver ~33 ms frames however cheap they are, so those devices fell from High to Low in ~14 s. `tickAdaptiveDpr` had the same blind spot.
 
-**Direction:** Add cooldown before stepping back up; log via debug overlay (`getRenderMetrics`).
+**Done:** `src/logic/frame-cadence.js` estimates the display cadence (10th percentile of recent rAF intervals, capped at ~30 Hz). `src/logic/auto-quality.js` steps down only when a window is slow (> 24 ms) **and** behind that cadence by 20% or CPU work fills 80% of the frame; it steps up after 30 s of good windows, doubling the wait each time an upgrade fails within 20 s (up to 8 min). The DPR ticker treats frames on cadence as keeping pace and doubles its recovery hold after a failed step up. `?debug` shows quality, cadence and the last window verdict (`getRenderMetrics().cadenceMs` / `.autoQuality`).
+
+**Known limit:** a GPU-bound renderer pinned at exactly two vsyncs on a 60 Hz panel, with an idle CPU, looks the same as a 30 Hz cap and keeps its tier (a steady 30 fps).
 
 ### G4 — Idle rendering on title/pause (P2, small)
 

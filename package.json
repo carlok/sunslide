@@ -19,6 +19,11 @@
   "dependencies": {
     "three": "0.160.1"
   },
+  "overrides": {
+    "get-uri": {
+      "basic-ftp": "6.2.4"
+    }
+  },
   "devDependencies": {
     "@axe-core/playwright": "^4.14.0",
     "@eslint/js": "^10.0.1",

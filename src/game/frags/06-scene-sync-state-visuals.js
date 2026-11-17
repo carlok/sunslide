@@ -150,6 +150,7 @@ function syncSky(){
   moonL.position.copy(_e2).multiplyScalar(5); moon.position.copy(_e2).multiplyScalar(30);
 }
 function updateCameraTarget(dt){
+  if(ecologyCaptureHold) return;
   if(state==='title'||state==='over'){ camLon=mod(camLon+dt*0.12,TAU); camLat+=(CAMERA.titleCamLat-camLat)*Math.min(1,dt); zoomTarget=1; }
   else {
     const w=actorWorld(player), k=Math.min(1,dt*(state==='warp'?(REDUCED?3:4):(REDUCED?3:5)));
@@ -180,8 +181,10 @@ function syncScene(time,dt){
   if(boostT>0&&!paused&&player.moving&&Math.random()<0.6) emit(frog.root.position,1,PC.teal,0.05,0.008,0.5,0.05,0.3);
   if(!paused) updateParticles(dt);
   placeCamera();
-  { const w=actorWorld(player), lit=(state==='title'||state==='over')?0.15:lightAt(w[0],w[1]), z=smooth(clamp(zoomT,0,1));
-    skyDay+=(lit*(1-0.7*z)-skyDay)*Math.min(1,dt*1.5);
+  { let lit, z=smooth(clamp(zoomT,0,1));
+    if(ecologyCaptureHold){ skyDay=ecologyCaptureSkyDay; lit=skyDay; }
+    else { const w=actorWorld(player); lit=(state==='title'||state==='over')?0.15:lightAt(w[0],w[1]); skyDay+=(lit*(1-0.7*z)-skyDay)*Math.min(1,dt*1.5); }
+    const w=actorWorld(player);
     frameAt(w[0],w[1]); skyMat.uniforms.uUp.value.copy(_R); skyMat.uniforms.uDay.value=skyDay; starMat.uniforms.uDay.value=skyDay;
     skyDome.position.copy(camera.position); }
   pMat.uniforms.uPx.value=ffMat.uniforms.uPx.value=glc.height/(2*Math.tan(camera.fov*DEG/2));

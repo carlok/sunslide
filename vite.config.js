@@ -337,6 +337,52 @@ export function startSunslide() {
     get settings() { return settingsFromStore(settingsStore); },
     haptics,
     sampleDrawCalls() { render(); return lastFrameDrawCalls; },
+  tileLightAt(tileId) {
+    const T = tiles[tileId]; if (!T) return 0;
+    const p = tilePos(T);
+    return lightAt(p.x + TW / 2, p.y + TH / 2);
+  },
+  setEcologyCaptureView(tileId, lighting = 'day') {
+    ecologyCaptureHold = true;
+    paused = true;
+    const T = tiles[tileId];
+    if (!T) return getCamPose();
+    const p = tilePos(T);
+    const gx = p.x + TW / 2;
+    const gy = p.y + TH / 2;
+    const lon = gx2lon(gx);
+    camLon = lon;
+    camLat = gy2lat(gy) - 0.14;
+    player.t = tileId;
+    player.x = 3;
+    player.y = 2;
+    player.moving = false;
+    player.nt = tileId;
+    player.nx = 3;
+    player.ny = 2;
+    zoomT = 0;
+    zoomTarget = 0;
+    viewFar = false;
+    state = 'play';
+    sunLon = mod(lighting === 'night' ? lon + Math.PI : lon, TAU);
+    ecologyCaptureSkyDay = lighting === 'night' ? 0.07 : 1;
+    skyDay = ecologyCaptureSkyDay;
+    syncSky();
+    return {
+      camLat, camLon, sunLon, zoomT, zoomTarget, viewFar, skyDay, state,
+      tileLight: lightAt(gx, gy),
+    };
+  },
+  drawCaptureFrame() {
+    const t = performance.now() / 1000;
+    syncScene(t, 0);
+    render();
+    return lastFrameDrawCalls;
+  },
+  releaseEcologyCaptureView() {
+    ecologyCaptureHold = false;
+    paused = false;
+  },
   };
   wakeRenderLoop();
 }

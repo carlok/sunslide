@@ -71,6 +71,25 @@ describe('ecology', () => {
     expect(hsl.h).toBeLessThan(0.45);
   });
 
+  it('patch shades span a visible range, stay green and never go dark', () => {
+    let minL = 1;
+    let maxL = 0;
+    for (let t = 0; t < 15; t++) {
+      for (let x = 0; x < 8; x++) {
+        for (let y = 0; y < 4; y++) {
+          const { l } = ecologyPatchColor(t, x, y);
+          const rgb = ecologyPatchRgb(t, x, y);
+          minL = Math.min(minL, l);
+          maxL = Math.max(maxL, l);
+          expect(rgb.g).toBeGreaterThan(rgb.r);
+          expect(rgb.g).toBeGreaterThan(rgb.b);
+        }
+      }
+    }
+    expect(minL).toBeGreaterThanOrEqual(0.25);
+    expect(maxL - minL).toBeGreaterThan(0.12);
+  });
+
   it('grow factor eases in over growSeconds', () => {
     expect(ecologyGrowFactor(0)).toBe(0);
     expect(ecologyGrowFactor(ECOLOGY.growSeconds)).toBe(1);

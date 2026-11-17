@@ -504,49 +504,50 @@ const gems=inst(new THREE.OctahedronGeometry(1,0),new THREE.MeshStandardMaterial
 
 /* ---------- ecology: bubble-pop green cells (instanced, capped) ---------- */
 const ECO_PATCH_MAX=ECOLOGY.maxCells;
-const _ecoPatchBase=new THREE.Color('#4caf5a');
+// Soft edges come from alpha (the real lit/shadowed floor shows through), never from darkening albedo.
+// No vertexColors: the plane has no color attribute; per-cell green comes from instanceColor.
 function wireEcoPatchMat(mat){
   mat.onBeforeCompile=sh=>{
     sh.uniforms.uSun=U.sun;
-    sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 vEcoWp;\nvarying vec2 vEcoLocal;')
+    sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 vEcoWp;\nvarying vec2 vEcoLocal;\nvarying float vEcoSeed;')
       .replace('#include <begin_vertex>',`#include <begin_vertex>
-      vEcoLocal=vec2(position.x,position.z);`)
+      vEcoLocal=position.xz;
+      vEcoSeed=fract(sin(dot(instanceMatrix[3].xyz,vec3(127.1,311.7,74.7)))*43758.5453);`)
       .replace('#include <worldpos_vertex>',`#include <worldpos_vertex>
-vEcoWp=(modelMatrix*instanceMatrix*vec4(transformed,1.0)).xyz;`);
-    sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nuniform vec3 uSun;\nvarying vec3 vEcoWp;\nvarying vec2 vEcoLocal;')
+      vEcoWp=(modelMatrix*instanceMatrix*vec4(transformed,1.0)).xyz;`);
+    sh.fragmentShader=sh.fragmentShader.replace('#include <common>',`#include <common>
+uniform vec3 uSun;
+varying vec3 vEcoWp;
+varying vec2 vEcoLocal;
+varying float vEcoSeed;
+float ecoHash(vec2 p){ return fract(sin(dot(p,vec2(12.9898,78.233)))*43758.5453); }
+float ecoNoise(vec2 p){
+  vec2 i=floor(p), f=fract(p); f=f*f*(3.0-2.0*f);
+  return mix(mix(ecoHash(i),ecoHash(i+vec2(1.0,0.0)),f.x),mix(ecoHash(i+vec2(0.0,1.0)),ecoHash(i+vec2(1.0,1.0)),f.x),f.y);
+}`)
       .replace('#include <color_fragment>',`#include <color_fragment>
-      float ecoN=fract(sin(dot(vEcoWp.xz,vec2(12.9898,78.233))+vEcoWp.y*0.37)*43758.5453);
-      float ecoN2=fract(sin(dot(vEcoWp.xz,vec2(39.3468,11.135))+vEcoWp.y*1.9)*28441.117);
-      float ecoM=0.72+0.42*ecoN+0.12*ecoN2;
-      float r=length(vEcoLocal);
-      float soft=1.0-smoothstep(0.28,0.52,r);
-      soft*=1.0-smoothstep(0.38,0.5,max(abs(vEcoLocal.x),abs(vEcoLocal.y)));
-      float speck=0.86+0.28*fract(ecoN*17.0+ecoN2*3.0);
-      float ecoSurfL=dot(normalize(vEcoWp),normalize(uSun));
-      float ecoDay=smoothstep(-0.14,0.48,ecoSurfL);
-      float ecoNight=1.0-ecoDay;
-      vec3 ecoAlbedo=diffuseColor.rgb*ecoM*speck;
-      diffuseColor.rgb=ecoAlbedo*soft*(0.35+0.65*ecoDay);
-      diffuseColor.rgb+=ecoAlbedo*ecoNight*0.28*soft;`)
+      vec2 ecoQ=vEcoLocal+vEcoSeed*vec2(17.3,31.7);
+      float ecoN1=ecoNoise(ecoQ*3.2), ecoN2=ecoNoise(ecoQ*7.5+4.1);
+      float ecoMott=0.6*ecoN1+0.4*ecoN2;
+      diffuseColor.rgb*=0.66+0.62*ecoMott;
+      diffuseColor.rgb=mix(diffuseColor.rgb,diffuseColor.rgb*vec3(1.25,1.08,0.55),0.6*smoothstep(0.5,0.85,ecoN2));
+      float ecoR=length(vEcoLocal)+(ecoN1-0.5)*0.1;
+      diffuseColor.a*=1.0-smoothstep(0.24,0.45,ecoR);`)
       .replace('#include <emissivemap_fragment>',`#include <emissivemap_fragment>
-      float ecoSurfL2=dot(normalize(vEcoWp),normalize(uSun));
-      float ecoNight2=1.0-smoothstep(-0.14,0.48,ecoSurfL2);
-      float ecoSoft=1.0-smoothstep(0.28,0.52,length(vEcoLocal));
-      vec3 ecoAlb=diffuseColor.rgb;
-      totalEmissiveRadiance+=ecoAlb*ecoNight2*0.55*ecoSoft;
-      totalEmissiveRadiance+=vec3(0.05,0.17,0.07)*ecoNight2*ecoSoft;`);
+      float ecoNight=1.0-smoothstep(-0.12,0.3,dot(normalize(vEcoWp),uSun));
+      totalEmissiveRadiance+=(diffuseColor.rgb*0.7+vec3(0.03,0.14,0.05))*ecoNight;`);
   };
-  mat.customProgramCacheKey=()=>'eco-patch-mottle-v3';
+  mat.customProgramCacheKey=()=>'eco-patch-alpha-v4';
 }
 const ecoPatchMat=new THREE.MeshStandardMaterial({
-  color:0xffffff,vertexColors:true,roughness:0.94,metalness:0,emissive:'#0a180c',emissiveIntensity:0.06,
+  color:0xffffff,roughness:0.94,metalness:0,transparent:true,depthWrite:false,
   side:THREE.DoubleSide,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2,
 });
 wireEcoPatchMat(ecoPatchMat);
 const ecoPatchGeo=new THREE.PlaneGeometry(1,1,1,1);
 ecoPatchGeo.rotateX(-Math.PI/2);
 const ecoPatches=inst(ecoPatchGeo,ecoPatchMat,ECO_PATCH_MAX,1);
-ecoPatches.receiveShadow=false;
+ecoPatches.receiveShadow=true;
 ecoPatches.instanceColor=new THREE.InstancedBufferAttribute(new Float32Array(ECO_PATCH_MAX*3),3);
 const _ecoCellCol=new THREE.Color();
 const ecoGrass=inst(new THREE.CylinderGeometry(0.35,0.45,1,4),new THREE.MeshStandardMaterial({color:'#6ec454',roughness:0.85}),ECOLOGY.maxDecorTotal,1);

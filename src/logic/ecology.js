@@ -128,9 +128,9 @@ export function planCellDecor(tileId, x, y) {
 
 /** 0–1 HSL green meadow base (seeded per maze cell). */
 export function ecologyPatchColor(tileId, x, y) {
-  const h = 0.3 + (rng(tileId, x, y, 90) - 0.5) * 0.16;
-  const s = 0.38 + rng(tileId, x, y, 91) * 0.32;
-  const l = 0.34 + rng(tileId, x, y, 92) * 0.16;
+  const h = 0.3 + (rng(tileId, x, y, 90) - 0.5) * 0.18;
+  const s = 0.45 + rng(tileId, x, y, 91) * 0.35;
+  const l = 0.26 + rng(tileId, x, y, 92) * 0.2;
   return { h, s, l };
 }
 
@@ -143,7 +143,7 @@ function hslChannel(p, q, t) {
   return p;
 }
 
-/** Linear RGB 0–1 for THREE.Color / tests. */
+/** sRGB 0–1 (pass THREE.SRGBColorSpace to Color.setRGB). */
 export function ecologyPatchRgb(tileId, x, y) {
   const { h, s, l } = ecologyPatchColor(tileId, x, y);
   if (s <= 0.0001) return { r: l, g: l, b: l };

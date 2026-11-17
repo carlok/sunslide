@@ -29,10 +29,10 @@ function syncEcology(){
     const T=tiles[cell.tileId]; if(!T) continue;
     const p=tilePos(T), lf=liftOf(T), g=ecologyGrowFactor(gameClock-cell.growAt,growT), pop=0.08+0.92*g;
     frameAt(p.x+cell.x+0.5,p.y+cell.y+0.5);
-    const patchS=0.68*pop;
+    const patchS=1.3*pop;
     surfMatrix(_M,_R,hash(cell.tileId,cell.x,cell.y)*TAU*0.3,CELL_TANGENT.sx*patchS,PATCH_THICK*0.35,CELL_TANGENT.sz*patchS,1+lf+PATCH_LIFT*pop);
     const rgb=ecologyPatchRgb(cell.tileId,cell.x,cell.y);
-    _ecoCellCol.setRGB(rgb.r,rgb.g,rgb.b);
+    _ecoCellCol.setRGB(rgb.r,rgb.g,rgb.b,THREE.SRGBColorSpace);
     ecoPatches.setColorAt(pi,_ecoCellCol);
     ecoPatches.setMatrixAt(pi,_M);
     pi++;
@@ -175,6 +175,8 @@ function placeCamera(){
   camera.fov=lerp(CAMERA.fovCloseDeg,CAMERA.fovFarDeg,z); camera.updateProjectionMatrix();
 }
 function syncScene(time,dt){
+  if(ecologyCaptureHold){ time=0; dt=0; }
+  clouds.visible=!ecologyCaptureHold;
   U.time.value=time;
   syncSky(); syncTiles(time); syncBubbles(time); syncEcology(); syncBloom(); syncFrog(time,dt); syncBats(time,dt);
   syncSinks(time,dt); syncOrchard(time); syncClouds(time); syncButterflies(time); syncFlags(time); syncPillars(); syncBerry(time); syncMeteors(dt);

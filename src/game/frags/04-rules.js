@@ -254,6 +254,7 @@ function onSlideEnd(T){
 }
 function update(dt){
   gameClock+=dt;
+  if(ecologyCaptureHold) return;
   if(state==='play'||state==='warp'||state==='dying') runTimeMs+=dt*1000;
   sunLon=mod(sunLon-dt*TAU/dayLen(),TAU);
   shakeT=Math.max(0,shakeT-dt);

@@ -27,10 +27,15 @@ function syncEcology(){
   const growT=ECOLOGY.growSeconds;
   for(const cell of ecologyState.byCell.values()){
     const T=tiles[cell.tileId]; if(!T) continue;
-    const p=tilePos(T), lf=liftOf(T), g=smooth(clamp((gameClock-cell.growAt)/growT,0,1)), pop=0.1+0.9*g;
+    const p=tilePos(T), lf=liftOf(T), g=ecologyGrowFactor(gameClock-cell.growAt,growT), pop=0.08+0.92*g;
     frameAt(p.x+cell.x+0.5,p.y+cell.y+0.5);
-    surfMatrix(_M,_R,0,CELL_TANGENT.sx*pop,PATCH_THICK*pop,CELL_TANGENT.sz*pop,1+lf+PATCH_LIFT*pop);
-    ecoPatches.setMatrixAt(pi++,_M);
+    const patchS=1.3*pop;
+    surfMatrix(_M,_R,hash(cell.tileId,cell.x,cell.y)*TAU*0.3,CELL_TANGENT.sx*patchS,PATCH_THICK*0.35,CELL_TANGENT.sz*patchS,1+lf+PATCH_LIFT*pop);
+    const rgb=ecologyPatchRgb(cell.tileId,cell.x,cell.y);
+    _ecoCellCol.setRGB(rgb.r,rgb.g,rgb.b,THREE.SRGBColorSpace);
+    ecoPatches.setColorAt(pi,_ecoCellCol);
+    ecoPatches.setMatrixAt(pi,_M);
+    pi++;
     for(const d of cell.decor){
       const off=decorLocalOffset(d);
       const gx=p.x+cell.x+0.5+off.x, gy=p.y+cell.y+0.5+off.y;
@@ -54,6 +59,7 @@ function syncEcology(){
   }
   ecoPatches.count=pi; ecoGrass.count=gi; ecoFlower.count=fi; ecoTreeTrunk.count=ti; ecoTreeTop.count=ttop;
   ecoPatches.instanceMatrix.needsUpdate=pi>0;
+  if(pi>0&&ecoPatches.instanceColor) ecoPatches.instanceColor.needsUpdate=true;
   ecoGrass.instanceMatrix.needsUpdate=gi>0;
   ecoFlower.instanceMatrix.needsUpdate=fi>0;
   ecoTreeTrunk.instanceMatrix.needsUpdate=ti>0;
@@ -144,6 +150,7 @@ function syncSky(){
   moonL.position.copy(_e2).multiplyScalar(5); moon.position.copy(_e2).multiplyScalar(30);
 }
 function updateCameraTarget(dt){
+  if(ecologyCaptureHold) return;
   if(state==='title'||state==='over'){ camLon=mod(camLon+dt*0.12,TAU); camLat+=(CAMERA.titleCamLat-camLat)*Math.min(1,dt); zoomTarget=1; }
   else {
     const w=actorWorld(player), k=Math.min(1,dt*(state==='warp'?(REDUCED?3:4):(REDUCED?3:5)));
@@ -168,14 +175,18 @@ function placeCamera(){
   camera.fov=lerp(CAMERA.fovCloseDeg,CAMERA.fovFarDeg,z); camera.updateProjectionMatrix();
 }
 function syncScene(time,dt){
+  if(ecologyCaptureHold){ time=0; dt=0; }
+  clouds.visible=!ecologyCaptureHold;
   U.time.value=time;
   syncSky(); syncTiles(time); syncBubbles(time); syncEcology(); syncBloom(); syncFrog(time,dt); syncBats(time,dt);
   syncSinks(time,dt); syncOrchard(time); syncClouds(time); syncButterflies(time); syncFlags(time); syncPillars(); syncBerry(time); syncMeteors(dt);
   if(boostT>0&&!paused&&player.moving&&Math.random()<0.6) emit(frog.root.position,1,PC.teal,0.05,0.008,0.5,0.05,0.3);
   if(!paused) updateParticles(dt);
   placeCamera();
-  { const w=actorWorld(player), lit=(state==='title'||state==='over')?0.15:lightAt(w[0],w[1]), z=smooth(clamp(zoomT,0,1));
-    skyDay+=(lit*(1-0.7*z)-skyDay)*Math.min(1,dt*1.5);
+  { let lit, z=smooth(clamp(zoomT,0,1));
+    if(ecologyCaptureHold){ skyDay=ecologyCaptureSkyDay; lit=skyDay; }
+    else { const w=actorWorld(player); lit=(state==='title'||state==='over')?0.15:lightAt(w[0],w[1]); skyDay+=(lit*(1-0.7*z)-skyDay)*Math.min(1,dt*1.5); }
+    const w=actorWorld(player);
     frameAt(w[0],w[1]); skyMat.uniforms.uUp.value.copy(_R); skyMat.uniforms.uDay.value=skyDay; starMat.uniforms.uDay.value=skyDay;
     skyDome.position.copy(camera.position); }
   pMat.uniforms.uPx.value=ffMat.uniforms.uPx.value=glc.height/(2*Math.tan(camera.fov*DEG/2));

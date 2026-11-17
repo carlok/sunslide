@@ -22,7 +22,7 @@ function applyQuality(){
   resize(); syncButtons();
 }
 function perfSample(ms){
-  if(qMode!=='auto'||qLevel===0||state!=='play'||paused||performance.now()-perfStart<4000){ perfAcc=perfN=0; return; }
+  if(qMode!=='auto'||qLevel===0||state!=='play'||paused||uiHold||performance.now()-perfStart<4000){ perfAcc=perfN=0; return; }
   perfAcc+=ms; if(++perfN>=90){ const avg=perfAcc/perfN; perfAcc=perfN=0; if(avg>24){ qLevel--; applyQuality(); perfStart=performance.now(); } }
 }
 function resize(){
@@ -40,7 +40,7 @@ function resize(){
   mapDpr=Math.min(2,deviceCap); mapC.width=Math.round(mapC.clientWidth*mapDpr); mapC.height=Math.round(mapC.clientHeight*mapDpr);
   starMat.uniforms.uDpr.value=pixelRatio; renderedPaused=false;
   // Resizing clears the canvases; while paused the loop is asleep, so wake it for one redraw.
-  if(paused) wakeRenderLoop();
+  if(paused||uiHold) wakeRenderLoop();
 }
 new ResizeObserver(()=>resize()).observe(stageEl);
 new ResizeObserver(()=>resize()).observe(mapC);
@@ -79,6 +79,8 @@ function pollPad(){
   let gp=PAD.idx>=0?gps[PAD.idx]:null;
   if(!gp) for(const g of gps) if(g&&g.connected){ gp=g; PAD.idx=g.index; break; }
   if(!gp) return;
+  // Menu / tutorial cards own input while open (their buttons are reachable by keyboard/touch).
+  if(uiModalOpen()){ PAD.prev=gp.buttons.map(x=>x.pressed); return; }
   const b=i=>!!(gp.buttons[i]&&gp.buttons[i].pressed), hit=i=>b(i)&&!PAD.prev[i];
   if(gp.buttons.some(x=>x.pressed)) audio();
   const ax=gp.axes[0]||0, ay=gp.axes[1]||0; let d=-1;
@@ -113,10 +115,11 @@ function padIdlePoll(){
   schedulePadIdlePoll();
 }
 function frame(ts){
+  const held=paused||uiHold;
   const plan=planRenderLoopFrame({
     documentHidden:document.hidden,
     gameState:state,
-    paused,
+    paused:held,
     tilesAnimating:tiles.some(t=>t.anim),
     renderedPaused,
   });
@@ -130,8 +133,8 @@ function frame(ts){
   if(plan.advanceClock&&!window.__ssSmokeNoFullscreen&&tickAdaptiveDpr(adaptiveDprState,dt*1000)) resize();
   perfSample(dt*1000);
   pollPad();
-  if(plan.simulate&&!paused) update(dt);
+  if(plan.simulate&&!held) update(dt);
   if(!plan.render) return;
   syncScene(now,dt); render(); drawFx(now,dt); drawMap(now); hud();
-  renderedPaused=paused;
+  renderedPaused=held;
 }

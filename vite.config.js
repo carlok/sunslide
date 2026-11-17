@@ -321,6 +321,7 @@ export function startSunslide() {
       };
     },
     setView,
+    setUiHold,
     setCamPose(o = {}) {
       if (o.camLat != null) camLat = o.camLat;
       if (o.camLon != null) camLon = o.camLon;

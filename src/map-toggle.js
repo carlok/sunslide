@@ -1,5 +1,6 @@
 /** Mobile map show/hide; desktop keeps map always on. */
 import { store } from './logic/store.js';
+import { onLocaleChange, t } from './i18n/index.js';
 
 const COMPACT_MQ = '(max-width: 699px), (max-height: 520px) and (orientation: landscape)';
 
@@ -15,7 +16,7 @@ export function initMapToggle() {
     panel.setAttribute('aria-hidden', vis ? 'false' : 'true');
     btn.setAttribute('aria-expanded', vis ? 'true' : 'false');
     btn.setAttribute('aria-pressed', vis ? 'true' : 'false');
-    btn.setAttribute('aria-label', vis ? 'Hide island map' : 'Show island map');
+    btn.setAttribute('aria-label', t(vis ? 'map.toggleAriaHide' : 'map.toggleAria'));
     if (remember) store.set('mapVisible', vis);
   };
 
@@ -37,4 +38,5 @@ export function initMapToggle() {
 
   applyMode();
   mq.addEventListener('change', applyMode);
+  onLocaleChange(() => setVisible(btn.getAttribute('aria-pressed') === 'true', false));
 }

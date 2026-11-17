@@ -338,4 +338,5 @@ function startGame(){
   if(typeof refreshShadowMap==='function') refreshShadowMap();
   $('ov').classList.add('hide'); $('wBlock').classList.add('hide'); say(tr('toast.ready'),1200); SFX.start();
   if(typeof syncAmbientGreen==='function') syncAmbientGreen();
+  if(typeof window.__ssOnGameStart==='function') window.__ssOnGameStart();
 }

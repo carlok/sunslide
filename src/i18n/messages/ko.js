@@ -36,21 +36,24 @@ export default {
   'settings.languageAria': '화면 언어',
 
   'credits.p1':
-    'Sunslide — 작은 행성 위에서 거품 개구리 Pip이 되어 뛰는 게임. 햇빛 아래의 15퍼즐 미끄러지는 초원 섬. © carlok.',
+    '<strong>Sunslide</strong> — 작은 행성 위에서 거품 개구리 Pip이 되어 뛰는 게임. 햇빛 아래의 <b>15퍼즐 미끄러지는 초원 섬</b>. © <a href="https://github.com/carlok" rel="noopener noreferrer">carlok</a>.',
   'credits.p2': '초원 섬을 밀어(15퍼즐) 거품을 모으고 행성을 초록으로 바꾸세요.',
   'credits.p3':
-    '원작 Apache-2.0. three.js(MIT)와 Vite로 제작. 한국어: sigco3111/sunslide-ko.',
+    '원작 <a href="https://github.com/carlok/sunslide/blob/main/LICENSE" rel="noopener noreferrer">Apache-2.0</a>. <a href="https://threejs.org/" rel="noopener noreferrer">three.js</a>(MIT)와 Vite로 제작. 한국어: <a href="https://github.com/sigco3111/sunslide-ko" rel="noopener noreferrer">sigco3111/sunslide-ko</a>.',
   'credits.linkRepo': 'github.com/carlok/sunslide',
 
   'keyshelp.kbd':
-    '방향키 / WASD 점프 · 스페이스 또는 휠 행성 시점 · P 일시정지 · M 음악',
-  'keyshelp.map': '지도를 클릭해 섬을 밀거나 경유지 설정',
+    '<b>방향키 / WASD</b> 점프 · <b>스페이스</b> 또는 <b>휠</b> 행성 시점 · <b>P</b> 일시정지 · <b>M</b> 음악',
+  'keyshelp.map':
+    '<b>지도를 클릭</b>해 섬을 밀거나 경유지 설정',
   'keyshelp.pad':
-    '게임패드: 스틱/방향패드 점프 · LB/RB 섬 선택 · A 밀기 · X/Y 시점 · Start 일시정지 · Select 음악',
+    '<b>게임패드</b>: 스틱/방향패드 점프 · <b>LB/RB</b> 섬 선택 · <b>A</b> 밀기 · <b>X/Y</b> 시점 · <b>Start</b> 일시정지 · <b>Select</b> 음악',
+  'keyshelp.aria': '조작 안내',
 
   'toolbar.aria': '게임 조작',
   'toolbar.viewAria': '행성 시점 전환',
   'toolbar.pauseAria': '일시정지',
+  'toolbar.resumeAria': '계속하기',
   'toolbar.musicAria': '음악 켜기/끄기',
 
   'hud.overlayAria': '게임 화면 정보',
@@ -60,6 +63,7 @@ export default {
   'hud.bubbles': '거품',
   'hud.home': '집',
   'hud.lives': '목숨',
+  'hud.livesAria': '남은 목숨 {count}개',
   'hud.statusAria': '낮/밤 상태와 힌트',
   'hud.chip.day': '낮',
   'hud.chip.twilight': '황혼',
@@ -68,6 +72,7 @@ export default {
 
   'map.toggle': '지도',
   'map.toggleAria': '섬 지도 보기',
+  'map.toggleAriaHide': '섬 지도 숨기기',
   'map.canvasAria':
     '섬 지도: 탭하면 인접한 섬을 밀거나 경유지를 설정합니다',
   'map.caption': '지도 · 탭: 섬 밀기 / 경유지',
@@ -99,6 +104,7 @@ export default {
   'title.b8':
     '하늘 베리는 속도 부스트를, 태양석은 박쥐를 쫓을 수 있게 해줍니다.',
   'title.play': '플레이',
+  'title.rules': '게임 방법',
   'title.menuFoot': '☰ 메뉴: 크레딧과 전체 조작법 · 게임패드 지원',
 
   'over.title': '불이 꺼졌다',
@@ -150,7 +156,7 @@ export default {
     '거품 위를 뛰어 모으세요. 거품을 비울 때마다 섬이 싹트고 — 타일이 초원으로 점점 초록해집니다.',
   'tutorial.goal.title': '목표',
   'tutorial.goal.body':
-    '모든 섬을 집 칸(1–15)으로 밀고, 햇빛으로 박쥐를 깨우고, 거품을 모두 비워 구역을 끝내세요. 그다음 다음 구역으로!',
+    '모든 섬을 집 칸(1–15)으로 밀어 박쥐를 재우고, 거품을 모두 비워 구역을 끝내세요. 그다음 다음 구역으로!',
 
   'hint.warp': '쉭 — 행성 반대편으로!',
   'hint.sinkhole': '앞에 싱크홀 — 돌아서거나 뚫고 지나가세요!',

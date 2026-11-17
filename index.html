@@ -70,16 +70,16 @@
         </div>
       </div>
       <div id="credits" class="menu-block">
-        <p data-i18n="credits.p1"><strong>Sunslide</strong> — hop as Pip the bubble frog on a tiny planet: a sunlit <b>15-puzzle of sliding meadow islands</b>. © <a href="https://github.com/carlok" rel="noopener noreferrer">carlok</a>.</p>
+        <p data-i18n-html="credits.p1"><strong>Sunslide</strong> — hop as Pip the bubble frog on a tiny planet: a sunlit <b>15-puzzle of sliding meadow islands</b>. © <a href="https://github.com/carlok" rel="noopener noreferrer">carlok</a>.</p>
         <p data-i18n="credits.p2">Slide the meadow islands (a 15-puzzle) to collect bubbles and turn the planet green.</p>
-        <p data-i18n="credits.p3">Source <a href="https://github.com/carlok/sunslide/blob/main/LICENSE" rel="noopener noreferrer">Apache-2.0</a>. Built with <a href="https://threejs.org/" rel="noopener noreferrer">three.js</a> (MIT) and Vite.</p>
+        <p data-i18n-html="credits.p3">Source <a href="https://github.com/carlok/sunslide/blob/main/LICENSE" rel="noopener noreferrer">Apache-2.0</a>. Built with <a href="https://threejs.org/" rel="noopener noreferrer">three.js</a> (MIT) and Vite.</p>
         <p><a href="https://github.com/carlok/sunslide" rel="noopener noreferrer" data-i18n="credits.linkRepo">github.com/carlok/sunslide</a></p>
       </div>
-      <div id="keyshelp" class="menu-block" aria-label="Control reference">
+      <div id="keyshelp" class="menu-block" role="group" aria-label="Control reference" data-i18n-aria="keyshelp.aria">
         <p><button type="button" id="menuTutorialBtn" class="menu-inline-btn" data-i18n="menu.tutorialBtn">How to play</button><span data-i18n="menu.tutorialLead"> — short 3-step tutorial</span></p>
-        <p data-i18n="keyshelp.kbd"><b>Arrows / WASD</b> hop · <b>Space</b> or <b>wheel</b> planet view · <b>P</b> pause · <b>M</b> music</p>
-        <p data-i18n="keyshelp.map"><b>Click the map</b> to slide an island or set a waypoint</p>
-        <p data-i18n="keyshelp.pad"><b>Gamepad</b>: stick/D-pad hop · <b>LB/RB</b> pick island · <b>A</b> slide · <b>X/Y</b> view · <b>Start</b> pause · <b>Select</b> music</p>
+        <p data-i18n-html="keyshelp.kbd"><b>Arrows / WASD</b> hop · <b>Space</b> or <b>wheel</b> planet view · <b>P</b> pause · <b>M</b> music</p>
+        <p data-i18n-html="keyshelp.map"><b>Click the map</b> to slide an island or set a waypoint</p>
+        <p data-i18n-html="keyshelp.pad"><b>Gamepad</b>: stick/D-pad hop · <b>LB/RB</b> pick island · <b>A</b> slide · <b>X/Y</b> view · <b>Start</b> pause · <b>Select</b> music</p>
       </div>
     </div>
     <div id="tb" role="toolbar" data-i18n-aria="toolbar.aria">
@@ -109,7 +109,7 @@
         <span id="hint"></span>
       </footer>
       <div id="mapbox">
-        <button type="button" id="mapToggle" class="map-toggle" aria-controls="mapPanel" aria-expanded="false" aria-pressed="false" data-i18n="map.toggle" data-i18n-aria="map.toggleAria">Map</button>
+        <button type="button" id="mapToggle" class="map-toggle" aria-controls="mapPanel" aria-expanded="false" aria-pressed="false" data-i18n="map.toggle" aria-label="Show island map">Map</button>
         <div id="mapPanel">
           <canvas id="map" role="img" data-i18n-aria="map.canvasAria"></canvas>
           <p id="mapcap" data-i18n="map.caption">Map · tap: slide / waypoint</p>
@@ -123,25 +123,28 @@
         <button type="button" class="d" data-d="2" data-i18n-aria="pad.down">▼</button>
       </nav>
     </aside>
-    <div id="ov" class="panel" role="dialog" aria-modal="true" aria-labelledby="title-main">
-      <div id="tBlock">
+    <div id="ov" class="panel">
+      <section id="tBlock" aria-labelledby="title-main">
         <h1 id="title-main">SUNSLIDE</h1>
         <p data-i18n="title.tagline">Slide the meadow islands (a 15-puzzle) to collect bubbles and turn the planet green.</p>
-        <ul>
-          <li data-i18n="title.b1">Swipe, use the arrows or the pad to hop. Pop bubbles in a row for combos.</li>
-          <li data-i18n="title.b2">Tap an island next to the empty meadow, on the planet or on the map, to slide it. Only sunlit islands move.</li>
-          <li data-i18n="title.b3">Tap any other island on the map to set a waypoint. The map shows every bubble left.</li>
-          <li data-i18n="title.b4">Each bat guards its own island: quick in the dark, drowsy in daylight.</li>
-          <li data-i18n="title.b5">Slide an island to its home slot (1–15 in reading order): its bat sleeps and its bubbles score double.</li>
-          <li data-i18n="title.b6">Clear an island and it blooms: flowers, trees and a beehive grow, and its bat flies away for good.</li>
-          <li data-i18n="title.b7">Watch for cracks: a sinkhole drops you straight through to the other side of the planet.</li>
-          <li data-i18n="title.b8">Sky berries give a speed burst. Sunstones let you chase the bats.</li>
-        </ul>
         <button type="button" class="big" id="go" data-i18n="title.play">PLAY</button>
         <p class="keys" id="bestline"></p>
         <p class="keys hide" id="starline"></p>
+        <details class="rules">
+          <summary data-i18n="title.rules">How to play</summary>
+          <ul>
+            <li data-i18n="title.b1">Swipe, use the arrows or the pad to hop. Pop bubbles in a row for combos.</li>
+            <li data-i18n="title.b2">Tap an island next to the empty meadow, on the planet or on the map, to slide it. Only sunlit islands move.</li>
+            <li data-i18n="title.b3">Tap any other island on the map to set a waypoint. The map shows every bubble left.</li>
+            <li data-i18n="title.b4">Each bat guards its own island: quick in the dark, drowsy in daylight.</li>
+            <li data-i18n="title.b5">Slide an island to its home slot (1–15 in reading order): its bat sleeps and its bubbles score double.</li>
+            <li data-i18n="title.b6">Clear an island and it blooms: flowers, trees and a beehive grow, and its bat flies away for good.</li>
+            <li data-i18n="title.b7">Watch for cracks: a sinkhole drops you straight through to the other side of the planet.</li>
+            <li data-i18n="title.b8">Sky berries give a speed burst. Sunstones let you chase the bats.</li>
+          </ul>
+        </details>
         <p class="keys" data-i18n="title.menuFoot">☰ Menu for credits and full control reference · gamepads supported</p>
-      </div>
+      </section>
       <div id="oBlock" class="hide">
         <h1 id="title-over" data-i18n="over.title">LIGHTS OUT</h1>
         <p id="res"></p>

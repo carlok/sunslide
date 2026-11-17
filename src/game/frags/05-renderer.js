@@ -854,13 +854,15 @@ scene.add(firefly);
 
 /* ---------- drifting clouds ---------- */
 const CLOUDS=12, PUFFS=7;
-const cloudMat=new THREE.ShaderMaterial({uniforms:{uSun:U.sun},transparent:true,depthWrite:false,
+// uClose: 0 in planet view, 1 in the close follow view, where puffs between camera and Pip get thinner.
+const cloudMat=new THREE.ShaderMaterial({uniforms:{uSun:U.sun,uClose:{value:0}},transparent:true,depthWrite:false,
   vertexShader:`varying vec3 vN; varying vec3 vW; void main(){ vec4 wp=modelMatrix*instanceMatrix*vec4(position,1.0); vW=wp.xyz; vN=normalize(mat3(modelMatrix)*mat3(instanceMatrix)*normal); gl_Position=projectionMatrix*viewMatrix*wp; }`,
-  fragmentShader:`uniform vec3 uSun; varying vec3 vN; varying vec3 vW; void main(){
+  fragmentShader:`uniform vec3 uSun; uniform float uClose; varying vec3 vN; varying vec3 vW; void main(){
     vec3 n=normalize(vN), v=normalize(cameraPosition-vW); float sd=dot(normalize(vW),uSun);
     float day=smoothstep(-0.2,0.3,sd), lit=0.45+0.55*max(dot(n,uSun),0.0);
     vec3 col=mix(vec3(0.07,0.09,0.18),vec3(1.0,0.97,0.93)*lit,day)+vec3(1.0,0.5,0.3)*pow(1.0-abs(sd),8.0)*0.45*day;
-    float a=0.85*pow(clamp(dot(n,v),0.0,1.0),0.7)*smoothstep(0.55,1.15,length(cameraPosition-vW));
+    float dist=length(cameraPosition-vW);
+    float a=0.85*pow(clamp(dot(n,v),0.0,1.0),0.7)*mix(smoothstep(0.55,1.15,dist),0.4*smoothstep(0.9,1.8,dist),uClose);
     gl_FragColor=vec4(col,a);`+TAIL+`}`});
 const clouds=inst(new THREE.SphereGeometry(1,16,12),cloudMat,CLOUDS*PUFFS,4); clouds.count=CLOUDS*PUFFS;
 const cloudData=[...Array(CLOUDS)].map(()=>{ const axis=randDir(), st=randDir(); st.addScaledVector(axis,-st.dot(axis)).normalize();

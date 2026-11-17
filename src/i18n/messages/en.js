@@ -33,21 +33,24 @@ export default {
   'settings.languageAria': 'Interface language',
 
   'credits.p1':
-    'Sunslide — hop as Pip the bubble frog on a tiny planet: a sunlit 15-puzzle of sliding meadow islands. © carlok.',
+    '<strong>Sunslide</strong> — hop as Pip the bubble frog on a tiny planet: a sunlit <b>15-puzzle of sliding meadow islands</b>. © <a href="https://github.com/carlok" rel="noopener noreferrer">carlok</a>.',
   'credits.p2': 'Slide the meadow islands (a 15-puzzle) to collect bubbles and turn the planet green.',
   'credits.p3':
-    'Source Apache-2.0. Built with three.js (MIT) and Vite.',
+    'Source <a href="https://github.com/carlok/sunslide/blob/main/LICENSE" rel="noopener noreferrer">Apache-2.0</a>. Built with <a href="https://threejs.org/" rel="noopener noreferrer">three.js</a> (MIT) and Vite.',
   'credits.linkRepo': 'github.com/carlok/sunslide',
 
   'keyshelp.kbd':
-    'Arrows / WASD hop · Space or wheel planet view · P pause · M music',
-  'keyshelp.map': 'Click the map to slide an island or set a waypoint',
+    '<b>Arrows / WASD</b> hop · <b>Space</b> or <b>wheel</b> planet view · <b>P</b> pause · <b>M</b> music',
+  'keyshelp.map':
+    '<b>Click the map</b> to slide an island or set a waypoint',
   'keyshelp.pad':
-    'Gamepad: stick/D-pad hop · LB/RB pick island · A slide · X/Y view · Start pause · Select music',
+    '<b>Gamepad</b>: stick/D-pad hop · <b>LB/RB</b> pick island · <b>A</b> slide · <b>X/Y</b> view · <b>Start</b> pause · <b>Select</b> music',
+  'keyshelp.aria': 'Control reference',
 
   'toolbar.aria': 'Game controls',
   'toolbar.viewAria': 'Toggle planet view',
   'toolbar.pauseAria': 'Pause game',
+  'toolbar.resumeAria': 'Resume game',
   'toolbar.musicAria': 'Toggle music',
 
   'hud.overlayAria': 'Game HUD',
@@ -57,6 +60,7 @@ export default {
   'hud.bubbles': 'Bubbles',
   'hud.home': 'Home',
   'hud.lives': 'Lives',
+  'hud.livesAria': '{count} lives left',
   'hud.statusAria': 'Day phase and hints',
   'hud.chip.day': 'DAY',
   'hud.chip.twilight': 'TWILIGHT',
@@ -65,6 +69,7 @@ export default {
 
   'map.toggle': 'Map',
   'map.toggleAria': 'Show island map',
+  'map.toggleAriaHide': 'Hide island map',
   'map.canvasAria':
     'Island map: tap to slide an adjacent island or set a waypoint',
   'map.caption': 'Map · tap: slide / waypoint',
@@ -95,6 +100,7 @@ export default {
     'Watch for cracks: a sinkhole drops you straight through to the other side of the planet.',
   'title.b8': 'Sky berries give a speed burst. Sunstones let you chase the bats.',
   'title.play': 'PLAY',
+  'title.rules': 'How to play',
   'title.menuFoot': '☰ Menu for credits and full control reference · gamepads supported',
 
   'over.title': 'LIGHTS OUT',
@@ -146,7 +152,7 @@ export default {
     'Hop over bubbles to collect them. Each bubble you clear helps that island bloom — the tile turns greener as meadows spread.',
   'tutorial.goal.title': 'Your goal',
   'tutorial.goal.body':
-    'Slide every island to its home slot (1–15), wake bats with sunlight, and clear all bubbles to finish the sector. Then hop onward to the next.',
+    'Slide every island to its home slot (1–15) to put its bat to sleep, and clear all bubbles to finish the sector. Then hop onward to the next.',
 
   'hint.warp': 'Whoosh — straight through the planet!',
   'hint.sinkhole': 'Sinkhole ahead — turn away or fall through the planet!',

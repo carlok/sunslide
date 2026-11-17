@@ -161,6 +161,7 @@ function updateCameraTarget(dt){
 }
 function placeCamera(){
   const z=smooth(clamp(zoomT,0,1));
+  cloudMat.uniforms.uClose.value=1-z;
   const off=closeCameraOffset();
   latLonFrame(camLat,camLon,_e1,_E2,_N2);
   _tA.copy(_e1).addScaledVector(_N2,CAMERA.lookTargetLift);
@@ -202,7 +203,7 @@ function render(){
   renderer.info.autoReset=false;
   renderer.info.reset();
   if(sunL.castShadow){
-    renderer.shadowMap.needsUpdate=shadowDirty||shouldUpdateShadowMap({shadowsEnabled:true,gameState:state,paused,tilesAnimating:tiles.some(t=>t.anim)});
+    renderer.shadowMap.needsUpdate=shadowDirty||shouldUpdateShadowMap({shadowsEnabled:true,gameState:state,paused:paused||uiHold,tilesAnimating:tiles.some(t=>t.anim)});
     shadowDirty=false;
   }
   if(useBloom&&composer) composer.render();

@@ -1,4 +1,8 @@
-/** Enter fullscreen on the first user gesture per session; respect exit during play. */
+/**
+ * Enter fullscreen when the player starts a run (PLAY / AGAIN / Restart). Once they leave fullscreen
+ * themselves, never force it again this session. Other gestures (Tab, tutorial Skip, menu taps) never
+ * trigger it.
+ */
 const root = document.documentElement;
 
 function fullscreenActive() {
@@ -18,29 +22,17 @@ function requestFullscreen() {
   }
 }
 
-function onFullscreenChange() {
-  window.dispatchEvent(new Event('resize'));
-  if (!fullscreenActive() && window.__sunslide) {
-    const st = window.__sunslide.state;
-    if (st === 'play' || st === 'warp' || st === 'dying') {
-      respectUserExit = true;
-      pendingRequest = false;
-    }
-  }
-}
-
-let pendingRequest = true;
+let enteredOnce = false;
 let respectUserExit = false;
 
-function armFullscreenSession() {
-  respectUserExit = false;
-  pendingRequest = true;
-  requestFullscreen();
+function onFullscreenChange() {
+  window.dispatchEvent(new Event('resize'));
+  if (fullscreenActive()) enteredOnce = true;
+  else if (enteredOnce) respectUserExit = true;
 }
 
-function tryFullscreenFromGesture() {
-  if (respectUserExit || !pendingRequest) return;
-  pendingRequest = false;
+function armFullscreenSession() {
+  if (respectUserExit) return;
   requestFullscreen();
 }
 
@@ -60,21 +52,5 @@ function bindStartButtons() {
 export function initFullscreen() {
   document.addEventListener('fullscreenchange', onFullscreenChange);
   document.addEventListener('webkitfullscreenchange', onFullscreenChange);
-  document.addEventListener(
-    'pointerdown',
-    (e) => {
-      if (e.isPrimary === false) return;
-      tryFullscreenFromGesture();
-    },
-    { capture: true, passive: true },
-  );
-  document.addEventListener(
-    'keydown',
-    (e) => {
-      if (e.repeat) return;
-      tryFullscreenFromGesture();
-    },
-    { capture: true },
-  );
   bindStartButtons();
 }

@@ -36,6 +36,7 @@ function hud(){
     hudKey=key;
     $('score').textContent=score; $('level').textContent=level; $('left').textContent=dotsLeft; $('home').textContent=home+'/15';
     $('lives').textContent=lives<=5?'●'.repeat(Math.max(0,lives)):'●×'+lives;
+    $('lives').setAttribute('aria-label',tr('hud.livesAria',{count:Math.max(0,lives)}));
     const chip=$('chip'); chip.textContent=lab; chip.style.color=L>0.6?'#ffd25e':L>0.2?'#ff9a6a':'#8f9cff';
     $('hint').textContent=hintText(L);
     greenHud();

@@ -89,13 +89,11 @@ export function initWinScreen(handlers) {
 
   document.addEventListener('keydown', (e) => {
     if (wBlock?.classList.contains('hide')) return;
+    // Enter is left to the focused button (Play again is focused on open), so Menu stays reachable.
     if (e.code === 'Escape') {
       e.preventDefault();
       e.stopPropagation();
       goMenu();
-    } else if (e.code === 'Enter') {
-      e.preventDefault();
-      goAgain();
     }
   });
 

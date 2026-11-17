@@ -1,7 +1,12 @@
 /** Pure policy for when to simulate, render, and keep the rAF loop alive. */
 
-/** Scenes that should keep animating while visible (title orbit, warp, etc.). */
+/**
+ * Scenes that should keep animating while visible (title orbit, warp, etc.).
+ * Paused scenes never do: slides, warps and deaths only advance in update(), which doesn't run
+ * while paused, so re-rendering them just burns a full frame (and a shadow pass) at 60 fps.
+ */
 export function sceneNeedsAnimation({ gameState, paused, tilesAnimating }) {
+  if (paused) return false;
   if (tilesAnimating) return true;
   if (gameState === 'title' || gameState === 'over') return true;
   if (gameState === 'warp' || gameState === 'dying' || gameState === 'clear') return true;

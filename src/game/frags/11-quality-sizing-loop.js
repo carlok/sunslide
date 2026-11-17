@@ -1,6 +1,11 @@
-const QUAL=[{n:'Low',dpr:1,px:0.7e6,shadow:0,bloom:false,blades:7000,flowers:700,ff:200},{n:'Medium',dpr:1.5,px:1.4e6,shadow:1024,bloom:true,blades:15000,flowers:1500,ff:400},{n:'High',dpr:2,px:2.4e6,shadow:2048,bloom:true,blades:30000,flowers:2800,ff:600}];
+const QUAL=[{n:'Low',dpr:1,px:0.7e6,shadow:0,bloom:false,blades:7000,flowers:700,ff:200},{n:'Medium',dpr:1.5,px:1.4e6,shadow:1024,bloom:true,blades:15000,flowers:1500,ff:400},{n:'High',dpr:2,px:2.4e6,shadow:1024,bloom:true,blades:30000,flowers:2800,ff:600}];
 let qMode=store.get('quality','auto'); if(![ 'auto',0,1,2].includes(qMode)) qMode='auto';
-let qLevel=qMode==='auto'?2:qMode, pixelRatio=1, perfStart=performance.now(), perfAcc=0, perfN=0, renderedPaused=false;
+// After a WebGL context loss we reload one tier lower for this tab session only; the saved preference
+// (often 'auto') is left alone so one bad backgrounding doesn't pin the game to Low forever.
+const Q_CAP_KEY='sunslide.qCap';
+const Q_CAP=(()=>{ try{ const v=sessionStorage.getItem(Q_CAP_KEY); return v==null?2:clamp(Math.round(+v)||0,0,2); }catch(e){ return 2; } })();
+function qLevelFor(mode){ return Math.min(mode==='auto'?2:mode,Q_CAP); }
+let qLevel=qLevelFor(qMode), pixelRatio=1, perfStart=performance.now(), perfAcc=0, perfN=0, renderedPaused=false;
 let adaptiveDprState=createAdaptiveDprState({ deviceDpr: window.devicePixelRatio||1 });
 function shadowDeviceCtx(){ return { qualityShadow:QUAL[qLevel].shadow, coarsePointer:matchMedia('(pointer: coarse)').matches, hardwareConcurrency:navigator.hardwareConcurrency, deviceMemory:navigator.deviceMemory, viewportWidth:stageEl.clientWidth }; }
 function applyQuality(){
@@ -11,11 +16,13 @@ function applyQuality(){
   sunL.castShadow=sh.enabled;
   if(sh.enabled&&sunL.shadow.mapSize.x!==sh.mapSize){ sunL.shadow.mapSize.set(sh.mapSize,sh.mapSize); if(sunL.shadow.map){ sunL.shadow.map.dispose(); sunL.shadow.map=null; } }
   else if(!sh.enabled&&sunL.shadow.map){ sunL.shadow.map.dispose(); sunL.shadow.map=null; }
+  // A freed map renders as fully shadowed in three r160 until redrawn; force a redraw even if paused.
+  refreshShadowMap();
   blades.geometry.instanceCount=q.blades; flowers.count=q.flowers; ffPts.geometry.setDrawRange(0,q.ff);
   resize(); syncButtons();
 }
 function perfSample(ms){
-  if(qMode!=='auto'||qLevel===0||state!=='play'||paused||performance.now()-perfStart<4000){ perfAcc=perfN=0; return; }
+  if(qMode!=='auto'||qLevel===0||state!=='play'||paused||uiHold||performance.now()-perfStart<4000){ perfAcc=perfN=0; return; }
   perfAcc+=ms; if(++perfN>=90){ const avg=perfAcc/perfN; perfAcc=perfN=0; if(avg>24){ qLevel--; applyQuality(); perfStart=performance.now(); } }
 }
 function resize(){
@@ -32,6 +39,8 @@ function resize(){
   fxDpr=Math.min(2,deviceCap); fxc.width=Math.round(w*fxDpr); fxc.height=Math.round(h*fxDpr);
   mapDpr=Math.min(2,deviceCap); mapC.width=Math.round(mapC.clientWidth*mapDpr); mapC.height=Math.round(mapC.clientHeight*mapDpr);
   starMat.uniforms.uDpr.value=pixelRatio; renderedPaused=false;
+  // Resizing clears the canvases; while paused the loop is asleep, so wake it for one redraw.
+  if(paused||uiHold) wakeRenderLoop();
 }
 new ResizeObserver(()=>resize()).observe(stageEl);
 new ResizeObserver(()=>resize()).observe(mapC);
@@ -70,6 +79,8 @@ function pollPad(){
   let gp=PAD.idx>=0?gps[PAD.idx]:null;
   if(!gp) for(const g of gps) if(g&&g.connected){ gp=g; PAD.idx=g.index; break; }
   if(!gp) return;
+  // Menu / tutorial cards own input while open (their buttons are reachable by keyboard/touch).
+  if(uiModalOpen()){ PAD.prev=gp.buttons.map(x=>x.pressed); return; }
   const b=i=>!!(gp.buttons[i]&&gp.buttons[i].pressed), hit=i=>b(i)&&!PAD.prev[i];
   if(gp.buttons.some(x=>x.pressed)) audio();
   const ax=gp.axes[0]||0, ay=gp.axes[1]||0; let d=-1;
@@ -90,16 +101,30 @@ function pollPad(){
   }
   PAD.prev=gp.buttons.map(x=>x.pressed);
 }
+// Gamepad buttons fire no DOM events, so once a paused frame lets the rAF loop sleep, keep polling
+// the pad on a timer; otherwise Start could pause the game but never resume it.
+let padIdleTimer=0;
+function schedulePadIdlePoll(){
+  if(padIdleTimer||PAD.idx<0) return;
+  padIdleTimer=setTimeout(padIdlePoll,100);
+}
+function padIdlePoll(){
+  padIdleTimer=0;
+  if(renderLoopActive||PAD.idx<0||document.hidden) return;
+  pollPad();
+  schedulePadIdlePoll();
+}
 function frame(ts){
+  const held=paused||uiHold;
   const plan=planRenderLoopFrame({
     documentHidden:document.hidden,
     gameState:state,
-    paused,
+    paused:held,
     tilesAnimating:tiles.some(t=>t.anim),
     renderedPaused,
   });
   if(plan.continueLoop){ requestAnimationFrame(frame); renderLoopActive=true; }
-  else renderLoopActive=false;
+  else { renderLoopActive=false; schedulePadIdlePoll(); }
 
   if(pendingClockAlign){ lastT=resumeClockAfterHidden(ts/1000); pendingClockAlign=false; }
   const now=ts/1000;
@@ -108,8 +133,8 @@ function frame(ts){
   if(plan.advanceClock&&!window.__ssSmokeNoFullscreen&&tickAdaptiveDpr(adaptiveDprState,dt*1000)) resize();
   perfSample(dt*1000);
   pollPad();
-  if(plan.simulate&&!paused) update(dt);
+  if(plan.simulate&&!held) update(dt);
   if(!plan.render) return;
   syncScene(now,dt); render(); drawFx(now,dt); drawMap(now); hud();
-  renderedPaused=paused;
+  renderedPaused=held;
 }

@@ -17,9 +17,12 @@ function sunslideGamePlugin() {
     load(id) {
       if (id !== virtualId) return;
       const frags = fragOrder
-        .map((f) =>
-          readFileSync(path.join(__dirname, 'src/game/frags', f), 'utf8'),
-        )
+        .map((f) => {
+          const file = path.join(__dirname, 'src/game/frags', f);
+          // Register each fragment so `npm run dev` reloads when one is edited.
+          this.addWatchFile(file);
+          return readFileSync(file, 'utf8');
+        })
         .join('\n\n');
       return `
 import * as THREE from 'three';
@@ -124,7 +127,7 @@ function applySettings(s) {
   if (s.reducedMotion !== undefined) applyReducedFromSettings(s.reducedMotion);
   if (s.quality !== undefined) {
     qMode = s.quality;
-    qLevel = s.quality === 'auto' ? 2 : s.quality;
+    qLevel = qLevelFor(s.quality);
     perfStart = performance.now();
     applyQuality();
   }
@@ -285,7 +288,7 @@ export function startSunslide() {
     get sunLon() { return sunLon; },
     set sunLon(v) { sunLon = v; },
     get zoom() { return [zoomT, zoomTarget, viewFar]; },
-    setQuality(l) { qMode = l; qLevel = l === 'auto' ? 2 : l; applyQuality(); },
+    setQuality(l) { qMode = l; qLevel = qLevelFor(l); applyQuality(); },
     get greenedCount() { return ecologyCount(ecologyState); },
     get greenProgress() { return currentGreenPercent(); },
     get initialGreenTarget() { return initialGreenTarget; },
@@ -321,6 +324,7 @@ export function startSunslide() {
       };
     },
     setView,
+    setUiHold,
     setCamPose(o = {}) {
       if (o.camLat != null) camLat = o.camLat;
       if (o.camLon != null) camLon = o.camLon;
@@ -381,10 +385,9 @@ export function startSunslide() {
   },
   drawCaptureFrame() {
     syncScene(0, 0);
-    // Paused frames skip shadow redraws; the capture sun moved, so let this frame redraw it.
-    paused = false;
+    // Paused frames skip shadow redraws; the capture sun moved, so force one for this frame.
+    refreshShadowMap();
     render();
-    paused = true;
     return lastFrameDrawCalls;
   },
   releaseEcologyCaptureView() {

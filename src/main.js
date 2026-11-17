@@ -21,7 +21,9 @@ async function boot() {
   });
   initAppMenu();
   initSettingsMenu();
-  initTutorial();
+  const tutorial = initTutorial();
+  // First-run cards appear on the first PLAY (over the held game), not stacked on the title screen.
+  window.__ssOnGameStart = () => tutorial?.maybeAutoShow();
   initMapToggle();
   initFullscreen();
   migrateLegacyBestScore(store);

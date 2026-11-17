@@ -21,7 +21,10 @@ export function initSettingsMenu() {
 
   const applyToGame = (patch) => {
     const next = writeSettings(store, patch);
-    window.__sunslide?.applySettings?.(next);
+    // Only forward what changed: re-sending every key re-applied quality on a sound toggle, which reset
+    // auto quality to High, rebuilt lighting and (while paused) blanked the shadow map.
+    const changed = Object.fromEntries(Object.keys(patch).map((k) => [k, next[k]]));
+    window.__sunslide?.applySettings?.(changed);
     return next;
   };
 

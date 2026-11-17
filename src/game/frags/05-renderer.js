@@ -4,9 +4,17 @@ try{ renderer=new THREE.WebGLRenderer({canvas:glc,antialias:true,powerPreference
 catch(e){ window.__ssFail('This browser has no WebGL, which Sunslide needs.'); throw e; }
 renderer.toneMapping=THREE.ACESFilmicToneMapping; renderer.toneMappingExposure=1.1;
 renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap; renderer.shadowMap.autoUpdate=false;
+// Fade the sun's shadows as the surface turns away from it. Near the terminator a wall a few cells
+// tall throws a shadow across half an island; on a tiny planet that reads as a giant dark slab rather
+// than a sunset. Midday shadows (N·L above ~0.3, sun higher than ~17°) are untouched.
+{
+  const SUN_SHADOW=/getShadow\( directionalShadowMap\[ i \], directionalLightShadow\.shadowMapSize, directionalLightShadow\.shadowBias, directionalLightShadow\.shadowRadius, vDirectionalShadowCoord\[ i \] \)/;
+  const chunk=THREE.ShaderChunk.lights_fragment_begin;
+  if(SUN_SHADOW.test(chunk)) THREE.ShaderChunk.lights_fragment_begin=chunk.replace(SUN_SHADOW,m=>`mix( 1.0, ${m}, smoothstep( 0.02, 0.3, dot( geometryNormal, directLight.direction ) ) )`);
+}
 const MAXANI=Math.min(8,renderer.capabilities.getMaxAnisotropy());
 glc.addEventListener('webglcontextlost',e=>{ e.preventDefault(); if(state==='play') setPaused(true); say(tr('toast.graphicsReset'),2500); });
-glc.addEventListener('webglcontextrestored',()=>{ qMode=Math.max(0,qLevel-1); qLevel=qMode; store.set('quality',qMode); location.reload(); });
+glc.addEventListener('webglcontextrestored',()=>{ try{ sessionStorage.setItem('sunslide.qCap',String(Math.max(0,qLevel-1))); }catch(e){} location.reload(); });
 const scene=new THREE.Scene(); scene.background=new THREE.Color('#04050d');
 const camera=new THREE.PerspectiveCamera(50,1,0.02,200);
 const U={time:{value:0},sun:{value:new THREE.Vector3(1,0,0)}};
@@ -142,7 +150,8 @@ const flowers=new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1,0),new THR
 flowers.frustumCulled=false; scene.add(flowers);
 (function polarDecor(){
   const m=new THREE.Matrix4(), d=v3();
-  // Polar trees/rocks sit on a tight cap; at grazing sun they cast planet-spanning shadow-map streaks.
+  // Polar trees/rocks sit on a tight cap; at grazing sun they cast long thin streaks across the islands.
+  // (The planet-sized shadows once blamed on them came from the batched tile normals; see wireBatchSphereMat.)
   const inst=(geo,mat,n,shadow=false)=>{ const im=new THREE.InstancedMesh(geo,mat,n); im.castShadow=shadow; im.receiveShadow=true; im.frustumCulled=false; scene.add(im); return im; };
   const nT=150;
   const trunk=inst(new THREE.CylinderGeometry(0.12,0.18,1,6).translate(0,0.5,0),new THREE.MeshStandardMaterial({color:'#6b4a2e',roughness:0.9}),nT);
@@ -213,8 +222,11 @@ function wireBatchSphereMat(mat,kind){
   mat.onBeforeCompile=sh=>{
     sh.uniforms.uTileOff={value:uTileOff};
     sh.uniforms.uTileLift={value:uTileLift};
+    // vTileId must be set before SPH_NORMAL_BATCH: three runs beginnormal_vertex before begin_vertex, and an
+    // unset vTileId lit every island with tile 0's normals (dark islands at noon, lit night side, and walls
+    // casting planet-spanning shadows through the non-casting meadow). Depth shaders only reach begin_vertex.
     sh.vertexShader=sh.vertexShader.replace('#include <common>',`#include <common>\n${SPH_HEAD_BATCH}`)
-      .replace('#include <beginnormal_vertex>',SPH_NORMAL_BATCH)
+      .replace('#include <beginnormal_vertex>',`vTileId=batchId;\n${SPH_NORMAL_BATCH}`)
       .replace('#include <begin_vertex>',`vTileId=batchId;\n${SPH_POS_BATCH}`);
     if(kind==='floor'){
       sh.uniforms.uFloorEmissive={value:uFloorEmissive};
@@ -238,7 +250,7 @@ totalEmissiveRadiance=uLampEmissive[int(vTileId+0.5)]*uLampEmissiveI[int(vTileId
 #endif`);
     }
   };
-  mat.customProgramCacheKey=()=>'sphere-tile-batch-'+kind;
+  mat.customProgramCacheKey=()=>'sphere-tile-batch-v2-'+kind;
   return mat;
 }
 function buildFloorAtlas(){
@@ -281,8 +293,11 @@ function estimateTilePools(){
 function resetTileBatches(){
   if(!floorBatch) return;
   scene.remove(floorBatch,wallBatch,lampBatch,slabBatch);
-  floorBatch.geometry.dispose(); wallBatch.geometry.dispose(); lampBatch.geometry.dispose(); slabBatch.geometry.dispose();
-  floorBatch.material.dispose(); wallBatch.material.dispose(); lampBatch.material.dispose(); slabBatch.material.dispose();
+  for(const b of [floorBatch,wallBatch,lampBatch,slabBatch]){
+    b.dispose(); // BatchedMesh.dispose frees the geometry and its per-instance matrices texture
+    b.customDepthMaterial?.dispose();
+    b.material.dispose();
+  }
   floorAtlasTex?.dispose(); floorAtlasTex=null;
   floorBatch=wallBatch=lampBatch=slabBatch=null;
 }
@@ -294,12 +309,15 @@ function ensureTileBatches(){
   const wallMat=wireBatchSphereMat(new THREE.MeshStandardMaterial({vertexColors:true,roughness:0.82,emissive:'#000'}),'wall');
   const lampMat=wireBatchSphereMat(new THREE.MeshStandardMaterial({color:'#fff3cf',emissive:'#ffb24a',emissiveIntensity:1,roughness:0.3}),'lamp');
   const slabMat=wireBatchSphereMat(new THREE.MeshStandardMaterial({vertexColors:true,roughness:1,shadowSide:THREE.DoubleSide}),'slab');
-  wallMat.customDepthMaterial=wireBatchSphereMat(new THREE.MeshDepthMaterial({depthPacking:THREE.RGBADepthPacking}),'wall');
-  slabMat.customDepthMaterial=wireBatchSphereMat(new THREE.MeshDepthMaterial({depthPacking:THREE.RGBADepthPacking}),'slab');
   floorBatch=new THREE.BatchedMesh(NT,pools.floor.v,pools.floor.i,floorMat);
   wallBatch=new THREE.BatchedMesh(NT,pools.walls.v,pools.walls.i,wallMat);
   lampBatch=new THREE.BatchedMesh(NT,pools.lamps.v,pools.lamps.i,lampMat);
   slabBatch=new THREE.BatchedMesh(NT,pools.slab.v,pools.slab.i,slabMat);
+  // three reads customDepthMaterial from the mesh, not the material. Without the sphere-mapped depth
+  // material the shadow pass drew the raw flat tile geometry (all 15 mazes stacked near the planet's
+  // core), which threw maze-shaped streaks across the islands while real walls cast no shadow at all.
+  wallBatch.customDepthMaterial=wireBatchSphereMat(new THREE.MeshDepthMaterial({depthPacking:THREE.RGBADepthPacking}),'wall');
+  slabBatch.customDepthMaterial=wireBatchSphereMat(new THREE.MeshDepthMaterial({depthPacking:THREE.RGBADepthPacking}),'slab');
   for(const b of [floorBatch,wallBatch,lampBatch,slabBatch]){ b.frustumCulled=false; b.receiveShadow=true; scene.add(b); }
   floorBatch.castShadow=false; wallBatch.castShadow=slabBatch.castShadow=true; lampBatch.castShadow=false;
 }
@@ -836,13 +854,15 @@ scene.add(firefly);
 
 /* ---------- drifting clouds ---------- */
 const CLOUDS=12, PUFFS=7;
-const cloudMat=new THREE.ShaderMaterial({uniforms:{uSun:U.sun},transparent:true,depthWrite:false,
+// uClose: 0 in planet view, 1 in the close follow view, where puffs between camera and Pip get thinner.
+const cloudMat=new THREE.ShaderMaterial({uniforms:{uSun:U.sun,uClose:{value:0}},transparent:true,depthWrite:false,
   vertexShader:`varying vec3 vN; varying vec3 vW; void main(){ vec4 wp=modelMatrix*instanceMatrix*vec4(position,1.0); vW=wp.xyz; vN=normalize(mat3(modelMatrix)*mat3(instanceMatrix)*normal); gl_Position=projectionMatrix*viewMatrix*wp; }`,
-  fragmentShader:`uniform vec3 uSun; varying vec3 vN; varying vec3 vW; void main(){
+  fragmentShader:`uniform vec3 uSun; uniform float uClose; varying vec3 vN; varying vec3 vW; void main(){
     vec3 n=normalize(vN), v=normalize(cameraPosition-vW); float sd=dot(normalize(vW),uSun);
     float day=smoothstep(-0.2,0.3,sd), lit=0.45+0.55*max(dot(n,uSun),0.0);
     vec3 col=mix(vec3(0.07,0.09,0.18),vec3(1.0,0.97,0.93)*lit,day)+vec3(1.0,0.5,0.3)*pow(1.0-abs(sd),8.0)*0.45*day;
-    float a=0.85*pow(clamp(dot(n,v),0.0,1.0),0.7)*smoothstep(0.55,1.15,length(cameraPosition-vW));
+    float dist=length(cameraPosition-vW);
+    float a=0.85*pow(clamp(dot(n,v),0.0,1.0),0.7)*mix(smoothstep(0.55,1.15,dist),0.4*smoothstep(0.9,1.8,dist),uClose);
     gl_FragColor=vec4(col,a);`+TAIL+`}`});
 const clouds=inst(new THREE.SphereGeometry(1,16,12),cloudMat,CLOUDS*PUFFS,4); clouds.count=CLOUDS*PUFFS;
 const cloudData=[...Array(CLOUDS)].map(()=>{ const axis=randDir(), st=randDir(); st.addScaledVector(axis,-st.dot(axis)).normalize();

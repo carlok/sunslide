@@ -1,5 +1,6 @@
 /** Lightweight first-run tutorial overlay (coach cards). */
 import { store } from './logic/store.js';
+import { trapTab } from './focus-trap.js';
 import {
   TUTORIAL_SEEN_KEY,
   TUTORIAL_STEPS,
@@ -79,6 +80,9 @@ export function initTutorial() {
     nextBtn.setAttribute('aria-label', nextBtn.textContent);
   };
 
+  // The game sim is held (frozen without the pause panel) while a card is up.
+  const hold = (on) => window.__sunslide?.setUiHold?.('tutorial', on);
+
   const close = (saveSeen) => {
     if (!open) return;
     open = false;
@@ -87,13 +91,20 @@ export function initTutorial() {
     dialog.classList.add('hide');
     scrim.setAttribute('aria-hidden', 'true');
     document.removeEventListener('keydown', onKey, true);
-    if (returnFocus && typeof returnFocus.focus === 'function') returnFocus.focus();
+    hold(false);
+    if (returnFocus && typeof returnFocus.focus === 'function' && returnFocus.getClientRects().length) {
+      returnFocus.focus();
+    } else if (dialog.contains(document.activeElement)) {
+      // Nothing sensible to return to (e.g. PLAY is gone once the game runs): leave focus on the page
+      // so arrow keys reach the game.
+      document.activeElement.blur();
+    }
     returnFocus = null;
   };
 
   const show = (opts = {}) => {
     if (open) return;
-    returnFocus = opts.returnFocus || document.activeElement;
+    returnFocus = 'returnFocus' in opts ? opts.returnFocus : document.activeElement;
     step = 0;
     renderStep();
     open = true;
@@ -101,7 +112,15 @@ export function initTutorial() {
     dialog.classList.remove('hide');
     scrim.setAttribute('aria-hidden', 'false');
     document.addEventListener('keydown', onKey, true);
+    hold(true);
     nextBtn.focus();
+  };
+
+  /** First PLAY of a new player: show the cards over the live (held) game, not over the title. */
+  const maybeAutoShow = () => {
+    if (open || !shouldAutoShowTutorial(store.get(TUTORIAL_SEEN_KEY, false))) return false;
+    requestAnimationFrame(() => show({ returnFocus: null }));
+    return true;
   };
 
   function onKey(e) {
@@ -112,15 +131,7 @@ export function initTutorial() {
       close(true);
       return;
     }
-    if (e.code === 'Tab') {
-      const focusables = [skipBtn, nextBtn];
-      const idx = focusables.indexOf(document.activeElement);
-      if (idx < 0) return;
-      e.preventDefault();
-      const dir = e.shiftKey ? -1 : 1;
-      const next = (idx + dir + focusables.length) % focusables.length;
-      focusables[next].focus();
-    }
+    trapTab(dialog, e);
   }
 
   skipBtn.addEventListener('click', () => close(true));
@@ -131,8 +142,9 @@ export function initTutorial() {
       renderStep();
     }
   });
+  // A stray click on the backdrop dismisses the card but doesn't count as "seen" for good.
   scrim.addEventListener('click', (e) => {
-    if (e.target === scrim) close(true);
+    if (e.target === scrim) close(false);
   });
 
   const menuBtn = document.getElementById('menuTutorialBtn');
@@ -147,13 +159,9 @@ export function initTutorial() {
     });
   }
 
-  if (shouldAutoShowTutorial(store.get(TUTORIAL_SEEN_KEY, false))) {
-    requestAnimationFrame(() => show());
-  }
-
   onLocaleChange(() => {
     if (open) renderStep();
   });
 
-  return { show, close };
+  return { show, close, maybeAutoShow };
 }

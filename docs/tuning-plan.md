@@ -16,7 +16,7 @@
 | L2 | Look | Ecology patch / grass hue tied to color-blind palette | S | P2 |
 | L3 | Look | Bloom pass cost vs marginal benefit on Low/Medium | M | P2 |
 | G1 | GPU | Draw-call batching for instanced decor (eco + bloom) | L | P3 |
-| G2 | GPU | Shadow map tiering (High = 2048 in `QUAL` vs policy cap 1024) | S | P1 |
+| G2 | GPU | Shadow map tiering (High = 2048 in `QUAL` vs policy cap 1024) — **done**: `QUAL[2].shadow` = 1024 | S | P1 |
 | G3 | GPU | Auto quality step-down threshold (90-frame avg > 24 ms) | S | P2 |
 | G4 | GPU | Pause / menu render idling (`renderIdle` policy) | S | P2 |
 | U1 | UX | Centralise UI copy for forks (`sunslide-ko`) | **M** | **P1** |
@@ -41,8 +41,8 @@
 | Bloom + composer | same | `useBloom: true`, composer RT 1280×720 |
 | Tile terrain | `05-renderer.js` `BatchedMesh` | **4** batches (floor/wall/lamp/slab); floor receives; wall+slab cast shadows |
 | Ecology cap | `src/logic/ecology.js` | **480** cell patches max (`NT×TW×TH`), **240** decor instances |
-| Shadow map | `11-quality-sizing-loop.js` `QUAL[2].shadow` | Request **2048**; `resolveShadowSettings()` often caps to **1024** on desktop (`shadows-policy.js`) |
-| Polar decor | PR #44 | `castShadow=false` on north-cap trees (prevents grazing pole band) |
+| Shadow map | `11-quality-sizing-loop.js` `QUAL[2].shadow` | **1024** (matches the `resolveShadowSettings()` desktop cap in `shadows-policy.js`) |
+| Polar decor | PR #44 | `castShadow=false` on north-cap trees. The planet-sized "structural" shadows were really batched tile normals using tile 0's frame (`wireBatchSphereMat`, fixed; guarded by the `tile-lighting` smoke check and `npm run shadow:repro`). Polar shadows stay off: at grazing sun they still add long thin streaks |
 
 ### Lighthouse (documented CI / local SwiftShader)
 

@@ -1,4 +1,6 @@
 /** Accessible hamburger menu: credits + controls (Esc, outside click). */
+import { trapTab } from './focus-trap.js';
+
 export function initAppMenu() {
   const btn = document.getElementById('menuBtn');
   const panel = document.getElementById('menuPanel');
@@ -6,6 +8,8 @@ export function initAppMenu() {
   if (!btn || !panel || !scrim) return;
 
   const isOpen = () => btn.getAttribute('aria-expanded') === 'true';
+  // Freeze the game (without the pause panel) while settings/credits are up: bats kept attacking.
+  const hold = (on) => window.__sunslide?.setUiHold?.('menu', on);
 
   const close = () => {
     if (!isOpen()) return;
@@ -14,6 +18,7 @@ export function initAppMenu() {
     scrim.classList.add('hide');
     document.removeEventListener('keydown', onKey, true);
     document.removeEventListener('pointerdown', onOutside, true);
+    hold(false);
   };
 
   const open = () => {
@@ -22,6 +27,7 @@ export function initAppMenu() {
     scrim.classList.remove('hide');
     document.addEventListener('keydown', onKey, true);
     document.addEventListener('pointerdown', onOutside, true);
+    hold(true);
     const first = panel.querySelector('input, select, button, a, [href]');
     if (first && typeof first.focus === 'function') first.focus();
     else panel.focus();
@@ -30,6 +36,7 @@ export function initAppMenu() {
   const toggle = () => (isOpen() ? close() : open());
 
   function onKey(e) {
+    if (trapTab(panel, e)) return;
     if (e.code !== 'Escape') return;
     e.preventDefault();
     e.stopPropagation();
@@ -47,5 +54,9 @@ export function initAppMenu() {
     e.stopPropagation();
     toggle();
   });
-  scrim.addEventListener('click', close);
+  scrim.addEventListener('click', () => {
+    // The scrim is about to disappear; don't strand focus on it.
+    close();
+    btn.focus({ preventScroll: true });
+  });
 }

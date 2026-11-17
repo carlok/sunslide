@@ -33,22 +33,25 @@ export default {
   'settings.languageAria': 'Lingua dell’interfaccia',
 
   'credits.p1':
-    'Sunslide — salta come Pip la rana-bolla su un pianeta minuto: un 15-puzzle di isole-prato al sole. © carlok.',
+    '<strong>Sunslide</strong> — salta come Pip la rana-bolla su un pianeta minuto: un <b>15-puzzle di isole-prato</b> al sole. © <a href="https://github.com/carlok" rel="noopener noreferrer">carlok</a>.',
   'credits.p2':
     'Fai scorrere le isole-prato (15-puzzle), raccogli le bolle e rendi verde il pianeta.',
   'credits.p3':
-    'Codice Apache-2.0. Realizzato con three.js (MIT) e Vite.',
+    'Codice <a href="https://github.com/carlok/sunslide/blob/main/LICENSE" rel="noopener noreferrer">Apache-2.0</a>. Realizzato con <a href="https://threejs.org/" rel="noopener noreferrer">three.js</a> (MIT) e Vite.',
   'credits.linkRepo': 'github.com/carlok/sunslide',
 
   'keyshelp.kbd':
-    'Frecce / WASD per saltare · Spazio o rotella per la vista · P pausa · M musica',
-  'keyshelp.map': 'Clic sulla mappa per far scorrere un’isola o impostare una tappa',
+    '<b>Frecce / WASD</b> per saltare · <b>Spazio</b> o <b>rotella</b> per la vista · <b>P</b> pausa · <b>M</b> musica',
+  'keyshelp.map':
+    '<b>Clic sulla mappa</b> per far scorrere un’isola o impostare una tappa',
   'keyshelp.pad':
-    'Gamepad: levetta per saltare · LB/RB scegli isola · A scorre · X/Y vista · Start pausa · Select musica',
+    '<b>Gamepad</b>: levetta per saltare · <b>LB/RB</b> scegli isola · <b>A</b> scorre · <b>X/Y</b> vista · <b>Start</b> pausa · <b>Select</b> musica',
+  'keyshelp.aria': 'Riepilogo comandi',
 
   'toolbar.aria': 'Comandi di gioco',
   'toolbar.viewAria': 'Alterna vista del pianeta',
   'toolbar.pauseAria': 'Pausa',
+  'toolbar.resumeAria': 'Riprendi',
   'toolbar.musicAria': 'Attiva/disattiva musica',
 
   'hud.overlayAria': 'HUD di gioco',
@@ -58,6 +61,7 @@ export default {
   'hud.bubbles': 'Bolle',
   'hud.home': 'Casa',
   'hud.lives': 'Vite',
+  'hud.livesAria': '{count} vite rimaste',
   'hud.statusAria': 'Fase del giorno e suggerimenti',
   'hud.chip.day': 'GIORNO',
   'hud.chip.twilight': 'CREPUSCOLO',
@@ -66,6 +70,7 @@ export default {
 
   'map.toggle': 'Mappa',
   'map.toggleAria': 'Mostra mappa delle isole',
+  'map.toggleAriaHide': 'Nascondi mappa delle isole',
   'map.canvasAria':
     'Mappa isole: tocca per far scorrere un’isola adiacente o impostare una tappa',
   'map.caption': 'Mappa · tocco: scorri / tappa',
@@ -98,6 +103,7 @@ export default {
     'Le bacche del cielo danno sprint. Le pietre solari fanno inseguire i pipistrelli.',
 
   'title.play': 'GIOCA',
+  'title.rules': 'Come si gioca',
   'title.menuFoot': '☰ Menu per crediti e comandi · gamepad supportati',
 
   'over.title': 'LUCI SPENTE',
@@ -149,7 +155,7 @@ export default {
     'Salta sulle bolle per raccoglierle. Ogni bolla svuotata fa sbocciare l’isola — la casella diventa sempre più verde.',
   'tutorial.goal.title': 'Il tuo obiettivo',
   'tutorial.goal.body':
-    'Porta ogni isola alla casa (1–15), sveglia i pipistrelli col sole e raccogli tutte le bolle per chiudere il settore. Poi avanti al prossimo.',
+    'Porta ogni isola alla sua casa (1–15) per far addormentare il suo pipistrello e raccogli tutte le bolle per chiudere il settore. Poi avanti al prossimo.',
 
   'hint.warp': 'Whoosh — attraverso il pianeta!',
   'hint.sinkhole': 'Sinkhole davanti — gira o attraversalo!',

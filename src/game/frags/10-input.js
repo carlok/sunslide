@@ -1,8 +1,28 @@
+let pauseReturnFocus=null;
 function setPaused(p){
   if(p&&state!=='play'&&state!=='dying'&&state!=='warp') return;
+  const was=paused;
   paused=p; renderedPaused=false; $('pause').classList.toggle('hide',!p); syncButtons();
   if(!p&&typeof refreshShadowMap==='function') refreshShadowMap();
   if(AUD.ac){ try{ p?AUD.ac.suspend():AUD.ac.resume(); }catch(e){} }
+  if(typeof wakeRenderLoop==='function') wakeRenderLoop();
+  // Keyboard users land on RESUME when the pause panel opens, and go back where they were after.
+  if(p&&!was){ pauseReturnFocus=document.activeElement; requestAnimationFrame(()=>{ if(paused) $('resume').focus({preventScroll:true}); }); }
+  else if(!p&&was){
+    const back=pauseReturnFocus; pauseReturnFocus=null;
+    if(back&&back!==document.body&&back.getClientRects&&back.getClientRects().length) back.focus({preventScroll:true});
+    else if($('pause').contains(document.activeElement)) document.activeElement.blur();
+  }
+}
+/** Menu / tutorial cards freeze the sim like a pause, but without the pause panel. */
+let uiHold=false;
+const uiHoldKeys=new Set();
+function setUiHold(key,on){
+  if(on) uiHoldKeys.add(key); else uiHoldKeys.delete(key);
+  const next=uiHoldKeys.size>0;
+  if(next===uiHold) return;
+  uiHold=next; renderedPaused=false;
+  if(!next&&typeof refreshShadowMap==='function') refreshShadowMap();
   if(typeof wakeRenderLoop==='function') wakeRenderLoop();
 }
 function setView(far){ viewFar=far; store.set('viewFar',far); syncButtons(); }
@@ -14,11 +34,31 @@ function syncButtons(){
   $('mBtn').textContent=tr('pause.musicLine',{state:MUS.on?tr('pause.stateOn'):tr('pause.stateOff')});
   $('vBtn').textContent=viewFar?tr('pause.viewPlanet'):tr('pause.viewClose');
   $('bView').classList.toggle('on',viewFar); $('bView2').textContent=viewFar?'◉':'◎';
-  const qLabel=qMode==='auto'?tr('settings.quality.auto')+' ('+QUAL[qLevel].n+')':QUAL[qLevel].n;
+  const qName=tr('settings.quality.'+qLevel);
+  const qLabel=qMode==='auto'?tr('settings.quality.auto')+' ('+qName+')':qName;
   $('qBtn').textContent=tr('pause.qualityLine',{label:qLabel});
+  // Toolbar: state for assistive tech, a tooltip for mouse users, and a pause glyph that flips.
+  const bP=$('bPause'), bV=$('bView2'), bM=$('bMus');
+  bP.textContent=paused?'▶':'❚❚';
+  bP.setAttribute('aria-label',tr(paused?'toolbar.resumeAria':'toolbar.pauseAria'));
+  bP.setAttribute('aria-pressed',String(!!paused));
+  bV.setAttribute('aria-pressed',String(!!viewFar));
+  bM.setAttribute('aria-pressed',String(!!MUS.on));
+  for(const b of [bP,bV,bM]) b.title=b.getAttribute('aria-label')||'';
 }
 const KEYS={ArrowUp:0,KeyW:0,ArrowRight:1,KeyD:1,ArrowDown:2,KeyS:2,ArrowLeft:3,KeyA:3};
+/** A modal UI layer (tutorial card, hamburger menu) owns the keyboard while it is open. */
+function uiModalOpen(){
+  const tut=document.getElementById('tutorialDialog'), menu=document.getElementById('menuPanel');
+  return !!((tut&&!tut.classList.contains('hide'))||(menu&&!menu.classList.contains('hide')));
+}
 addEventListener('keydown',e=>{
+  if(uiModalOpen()) return;
+  const t=e.target;
+  // Form controls keep their own keys (arrows change a select, Space ticks a checkbox).
+  if(t&&t.closest&&t.closest('input,select,textarea')) return;
+  // Enter/Space on a focused button is a native click; handling it here too started games twice.
+  if((e.code==='Enter'||e.code==='Space'||e.code==='NumpadEnter')&&t&&t.closest&&t.closest('button,a[href]')) return;
   if(KEYS[e.code]!==undefined){ e.preventDefault(); if(state==='title'){ startGame(); return; } if(!paused) want=KEYS[e.code]; return; }
   if(e.code==='Space'){ e.preventDefault(); setView(!viewFar); }
   else if(state==='win'){ /* win overlay handles Esc / Enter */ }
@@ -91,7 +131,7 @@ mapC.addEventListener('pointerdown',e=>{
   const c=Math.floor((x-mapG.pad)/mapG.cw), r=Math.floor((y-mapG.top)/mapG.ch);
   if(c<0||c>=COLS||r<0||r>=ROWS) return;
   const id=slotGrid[r][c]; if(id<0) return;
-  if(holeNeighbors().some(n=>n.c===c&&n.r===r)){ const msg=trySlide(c,r); if(msg){ say(msg,1200); SFX.nope(); } return; }
+  if(holeNeighbors().some(n=>n.c===c&&n.r===r)){ const msg=trySlide(c,r); if(msg){ say(tr(msg),1200); SFX.nope(); } return; }
   const T=tiles[id];
   if(waypoint===id){ waypoint=-1; say(tr('toast.waypointCleared'),800); SFX.tick(); return; }
   if(T.cleared){ say(tr('toast.waypointBloom',{num:T.num}),1000); return; }
@@ -114,10 +154,10 @@ $('resume').addEventListener('click',()=>setPaused(false));
 $('sBtn').addEventListener('click',()=>setMuted(!AU.muted));
 $('vBtn').addEventListener('click',()=>setView(!viewFar));
 $('restart').addEventListener('click',()=>{ setPaused(false); startGame(); });
-$('qBtn').addEventListener('click',()=>{ const order=['auto',2,1,0]; qMode=order[(order.indexOf(qMode)+1)%order.length]; store.set('quality',qMode); qLevel=qMode==='auto'?2:qMode; perfStart=performance.now(); applyQuality(); });
+$('qBtn').addEventListener('click',()=>{ const order=['auto',2,1,0]; qMode=order[(order.indexOf(qMode)+1)%order.length]; store.set('quality',qMode); qLevel=qLevelFor(qMode); perfStart=performance.now(); applyQuality(); });
 document.addEventListener('visibilitychange',()=>{
   if(document.hidden){
-    if(state==='play'||state==='warp') setPaused(true);
+    if(state==='play'||state==='warp'||state==='dying') setPaused(true);
     if(AUD.ac&&AUD.ac.state==='running') AUD.ac.suspend().catch(()=>{});
     return;
   }

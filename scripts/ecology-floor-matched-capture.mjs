@@ -6,7 +6,7 @@
  */
 import { chromium } from 'playwright';
 import { spawn } from 'node:child_process';
-import { existsSync, mkdirSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -32,19 +32,42 @@ const host = process.env.PREVIEW_HOST || '127.0.0.1';
 const port = Number(process.env.PREVIEW_PORT) || 4176;
 const baseUrl = `http://${host}:${port}/sunslide/`;
 
-const preview = spawn(
-  'npx',
-  ['vite', 'preview', '--host', host, '--port', String(port), '--strictPort'],
-  { cwd: root, stdio: 'ignore', env: { ...process.env, BROWSER: 'none' } },
-);
+// A leftover server on the port would silently serve another build (e.g. "after" for a "before" shot).
+if (await fetch(baseUrl).then(() => true, () => false)) {
+  console.error(`Port ${port} is already serving; stop that server or set PREVIEW_PORT`);
+  process.exit(1);
+}
 
+const preview = spawn(
+  process.execPath,
+  [path.join(root, 'node_modules', 'vite', 'bin', 'vite.js'), 'preview', '--host', host, '--port', String(port), '--strictPort'],
+  { cwd: root, stdio: 'ignore', detached: true, env: { ...process.env, BROWSER: 'none' } },
+);
+const stopPreview = () => {
+  try {
+    process.kill(-preview.pid, 'SIGTERM');
+  } catch {
+    /* already gone */
+  }
+};
+process.on('exit', stopPreview);
+
+let served = '';
 for (let i = 0; i < 120; i++) {
   try {
-    if ((await fetch(baseUrl)).ok) break;
+    const res = await fetch(baseUrl);
+    if (res.ok) {
+      served = await res.text();
+      break;
+    }
   } catch {
     /* wait */
   }
   await new Promise((r) => setTimeout(r, 250));
+}
+if (served !== readFileSync(path.join(root, 'dist', 'index.html'), 'utf8')) {
+  console.error(`Server on port ${port} is not serving ${path.join(root, 'dist')}`);
+  process.exit(1);
 }
 
 const browser = await chromium.launch({
@@ -101,41 +124,26 @@ const focusTile = await page.evaluate(() => {
   let bestScore = -1;
   for (let tid = 0; tid < S.tiles.length; tid++) {
     const T = S.tiles[tid];
-    let open = 0;
+    // Slot row 1 spans the subsolar latitude, so the day shot has the sun nearly overhead.
+    if (T.slot?.r !== 1) continue;
     let bubbles = 0;
-    for (let y = 0; y < 4; y++) {
-      for (let x = 0; x < 8; x++) {
-        const i = y * 8 + x;
-        if (T.walls?.[i]) continue;
-        open++;
-        if (T.dots[i] === 1) bubbles++;
-      }
-    }
-    const score = bubbles * 10 + open;
-    if (score > bestScore) {
-      bestScore = score;
+    for (let i = 0; i < 32; i++) if (T.dots[i] === 1) bubbles++;
+    if (bubbles > bestScore) {
+      bestScore = bubbles;
       best = tid;
     }
   }
   return best;
 });
 
-const pops = await page.evaluate(() => {
+const pops = await page.evaluate((tid) => {
+  const T = window.__sunslide.tiles[tid];
   const out = [];
-  for (let tid = 0; tid < window.__sunslide.tiles.length; tid++) {
-    const T = window.__sunslide.tiles[tid];
-    for (let y = 0; y < 4; y++) {
-      for (let x = 0; x < 8; x++) {
-        const i = y * 8 + x;
-        if (T.walls?.[i]) continue;
-        if (T.dots[i] !== 1) continue;
-        out.push([tid, x, y]);
-      }
-    }
-  }
-  out.sort((a, b) => a[0] - b[0] || a[2] - b[2] || a[1] - b[1]);
+  for (let i = 0; i < 32; i++) if (T.dots[i] === 1) out.push([tid, i % 8, (i / 8) | 0]);
+  // Clearing the island triggers its own floor bloom, which would hide the patches being compared.
+  if (out.length && !T.dots.some((v) => v > 1)) out.pop();
   return out;
-});
+}, focusTile);
 
 for (const pop of pops) {
   await page.evaluate(([t, x, y]) => window.__sunslide.popBubbleAt(t, x, y), pop);
@@ -160,8 +168,6 @@ const metrics = await page.evaluate((tid) => ({
   tileLight: window.__sunslide.tileLightAt?.(tid),
 }), focusTile);
 
-await page.evaluate(() => window.__sunslide.releaseEcologyCaptureView?.());
-
 const stage = await page.locator('#stage').boundingBox();
 if (!stage) throw new Error('stage missing');
 const crop = {
@@ -173,6 +179,7 @@ const crop = {
 
 await page.screenshot({ path: outFull, clip: stage, animations: 'disabled' });
 await page.screenshot({ path: outCrop, clip: crop, animations: 'disabled' });
+await page.evaluate(() => window.__sunslide.releaseEcologyCaptureView?.());
 
 console.log(
   JSON.stringify({
@@ -190,4 +197,4 @@ console.log(
 );
 
 await browser.close();
-preview.kill('SIGTERM');
+stopPreview();

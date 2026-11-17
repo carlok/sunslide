@@ -374,9 +374,11 @@ export function startSunslide() {
     };
   },
   drawCaptureFrame() {
-    const t = performance.now() / 1000;
-    syncScene(t, 0);
+    syncScene(0, 0);
+    // Paused frames skip shadow redraws; the capture sun moved, so let this frame redraw it.
+    paused = false;
     render();
+    paused = true;
     return lastFrameDrawCalls;
   },
   releaseEcologyCaptureView() {

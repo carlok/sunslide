@@ -6,6 +6,7 @@ import {
   loadStoredRunBest,
 } from './logic/run-best.js';
 import { store } from './logic/store.js';
+import { onLocaleChange, t } from './i18n/index.js';
 
 /**
  * Win overlay (sector clear): focus, Esc → menu, aria-live summary.
@@ -56,9 +57,10 @@ export function initWinScreen(handlers) {
       prevBestEl.classList.toggle('hide', isNewBest || !prev);
     }
 
+    const timeLabel = formatRunTime(record.timeMs);
     const summary = isNewBest
-      ? `Sector clear. New best: ${record.moves} moves in ${formatRunTime(record.timeMs)}.`
-      : `Sector clear. ${record.moves} moves in ${formatRunTime(record.timeMs)}.`;
+      ? t('win.announceNew', { moves: record.moves, time: timeLabel })
+      : t('win.announce', { moves: record.moves, time: timeLabel });
     if (announce) announce.textContent = summary;
 
     tBlock?.classList.add('hide');

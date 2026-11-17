@@ -1,3 +1,6 @@
+import { initI18n, onLocaleChange } from './i18n/index.js';
+import { applyDomI18n } from './i18n/dom.js';
+import { t } from './i18n/index.js';
 import { initAppMenu } from './menu.js';
 import { initSettingsMenu } from './settings-menu.js';
 import { initMapToggle } from './map-toggle.js';
@@ -9,6 +12,13 @@ import { store } from './logic/store.js';
 import { initTutorial } from './tutorial.js';
 
 async function boot() {
+  initI18n();
+  window.__ssBoot = true;
+  onLocaleChange(() => {
+    applyDomI18n(t);
+    window.__sunslide?.refreshHud?.();
+    window.__sunslide?.syncPauseButtons?.();
+  });
   initAppMenu();
   initSettingsMenu();
   initTutorial();

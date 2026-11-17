@@ -1,18 +1,18 @@
 let toastTimer=0, hudKey='', greenHudKey='';
 function say(msg,ms){ const t=$('toast'); t.textContent=msg; t.classList.add('on'); clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('on'),ms||1000); }
 function hintText(L){
-  if(state==='warp') return 'Whoosh — straight through the planet!';
+  if(state==='warp') return tr('hint.warp');
   if(state!=='play') return '';
-  if(sink&&sink.phase!=='close') return 'Sinkhole ahead — turn away or fall through the planet!';
-  if(fright>0) return 'Bats are scared — catch them! '+Math.ceil(fright)+'s';
-  if(boostT>0) return 'Berry speed! '+Math.ceil(boostT)+'s';
-  if(berry) return 'A sky berry is ripe — follow the magenta arrow';
-  if(L<0.35&&bats.some(g=>g.home===player.t&&(g.mode==='live'||g.mode==='wait')&&!g.asleep)) return 'Bat island at night: watch for glowing eyes';
-  if(dotsLeft<=CFG.radar) return 'Follow the gold arrows to the last bubbles';
-  if(waypoint>=0) return 'Follow the pink arrow to island '+tiles[waypoint].num;
-  if(tiles[player.t].left===0) return 'Island done — the gold arrow points to more bubbles';
-  if(holeNeighbors().some(n=>lightSlot(n.c,n.r)>=CFG.slideLight)) return PAD.idx>=0?'LB/RB pick an island, A slides it':'Tap a glowing island (or the map) to slide it';
-  return 'Islands only slide in sunlight — wait for the sun';
+  if(sink&&sink.phase!=='close') return tr('hint.sinkhole');
+  if(fright>0) return tr('hint.fright',{seconds:Math.ceil(fright)});
+  if(boostT>0) return tr('hint.berryBoost',{seconds:Math.ceil(boostT)});
+  if(berry) return tr('hint.berryRipe');
+  if(L<0.35&&bats.some(g=>g.home===player.t&&(g.mode==='live'||g.mode==='wait')&&!g.asleep)) return tr('hint.batEyes');
+  if(dotsLeft<=CFG.radar) return tr('hint.lastBubbles');
+  if(waypoint>=0) return tr('hint.waypoint',{num:tiles[waypoint].num});
+  if(tiles[player.t].left===0) return tr('hint.islandDone');
+  if(holeNeighbors().some(n=>lightSlot(n.c,n.r)>=CFG.slideLight)) return PAD.idx>=0?tr('hint.padSlide'):tr('hint.tapSlide');
+  return tr('hint.waitSun');
 }
 function greenHud(){
   if(state!=='play'&&state!=='warp'&&state!=='clear'&&state!=='dying') return;
@@ -25,11 +25,11 @@ function greenHud(){
   el.textContent=label;
   ring.style.setProperty('--green-pct',String(pct));
   ring.setAttribute('aria-valuenow',String(pct));
-  ring.setAttribute('aria-valuetext',label+' planet green');
+  ring.setAttribute('aria-valuetext',tr('hud.greenPctAria',{pct:label}));
 }
 function hud(){
   const w=actorWorld(player), L=lightAt(w[0],w[1]);
-  const lab=L>0.6?'DAY':L>0.2?'TWILIGHT':'NIGHT', home=tiles.filter(isHome).length;
+  const lab=L>0.6?tr('hud.chip.day'):L>0.2?tr('hud.chip.twilight'):tr('hud.chip.night'), home=tiles.filter(isHome).length;
   const key=[score,level,dotsLeft,lives,lab,home,state,hintText(L)].join('|');
   if(key===hudKey) greenHud();
   else{

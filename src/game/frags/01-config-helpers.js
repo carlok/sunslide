@@ -11,7 +11,7 @@ const BATCOL=['#ff4f7b','#ffae35','#5fe6ff','#c286ff'];
 const INSET=0.09, SLAB=0.045, LIFT=0.07;
 const gx2lon=gx=>gx*CW, gy2lat=gy=>LATR-gy*CH;
 const mod=(a,n)=>((a%n)+n)%n, wrapD=d=>mod(d+GW/2,GW)-GW/2, angD=d=>mod(d+Math.PI,TAU)-Math.PI;
-const clamp=(v,a,b)=>v<a?a:v>b?b:v, lerp=(a,b,t)=>a+(b-a)*t, ri=n=>(Math.random()*n)|0, smooth=t=>t*t*(3-2*t);
+const clamp=(v,a,b)=>v<a?a:v>b?b:v, lerp=(a,b,t)=>a+(b-a)*t, ri=n=>(Math.random()*n)|0, smooth=u=>u*u*(3-2*u);
 const hash=(a,b,c)=>{ const s=Math.sin(a*127.1+b*311.7+c*74.7)*43758.5453; return s-Math.floor(s); };
 const $=id=>document.getElementById(id);
 let REDUCED=!!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches);

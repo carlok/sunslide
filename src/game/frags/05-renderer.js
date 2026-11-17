@@ -5,7 +5,7 @@ catch(e){ window.__ssFail('This browser has no WebGL, which Sunslide needs.'); t
 renderer.toneMapping=THREE.ACESFilmicToneMapping; renderer.toneMappingExposure=1.1;
 renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap; renderer.shadowMap.autoUpdate=false;
 const MAXANI=Math.min(8,renderer.capabilities.getMaxAnisotropy());
-glc.addEventListener('webglcontextlost',e=>{ e.preventDefault(); if(state==='play') setPaused(true); say('Graphics reset by the browser — lowering quality',2500); });
+glc.addEventListener('webglcontextlost',e=>{ e.preventDefault(); if(state==='play') setPaused(true); say(tr('toast.graphicsReset'),2500); });
 glc.addEventListener('webglcontextrestored',()=>{ qMode=Math.max(0,qLevel-1); qLevel=qMode; store.set('quality',qMode); location.reload(); });
 const scene=new THREE.Scene(); scene.background=new THREE.Color('#04050d');
 const camera=new THREE.PerspectiveCamera(50,1,0.02,200);
@@ -565,7 +565,7 @@ const bloomStems=inst(new THREE.CylinderGeometry(0.05,0.07,1,5).translate(0,0.5,
 const bloomCores=inst(G_BUB,new THREE.MeshStandardMaterial({color:'#ffd84a',emissive:'#ff9d2e',emissiveIntensity:0.5,roughness:0.5}),BLOOM_MAX);
 bloomHeads.castShadow=bloomStems.castShadow=true;
 const BLOOMCOL=['#ff8fbf','#fff6e6','#ffd84a','#b99bff','#ff6b6b','#8fd0ff'].map(COL);
-const easeBack=t=>{ const c=1.7; t=clamp(t,0,1); return 1+(c+1)*Math.pow(t-1,3)+c*Math.pow(t-1,2); };
+const easeBack=(u)=>{ const c=1.7; u=clamp(u,0,1); return 1+(c+1)*Math.pow(u-1,3)+c*Math.pow(u-1,2); };
 function syncBloom(){
   let n=0;
   for(const T of tiles){

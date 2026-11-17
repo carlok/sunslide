@@ -8,6 +8,7 @@ import {
   nextTutorialStep,
   shouldAutoShowTutorial,
 } from './logic/tutorial.js';
+import { onLocaleChange, t } from './i18n/index.js';
 
 export function initTutorial() {
   const stage = document.getElementById('stage');
@@ -46,7 +47,7 @@ export function initTutorial() {
   skipBtn.type = 'button';
   skipBtn.id = 'tutorialSkip';
   skipBtn.className = 'tutorial-skip';
-  skipBtn.textContent = 'Skip';
+  skipBtn.setAttribute('data-i18n', 'tutorial.skip');
 
   const nextBtn = document.createElement('button');
   nextBtn.type = 'button';
@@ -67,10 +68,14 @@ export function initTutorial() {
   const renderStep = () => {
     step = clampTutorialStep(step);
     const s = TUTORIAL_STEPS[step];
-    title.textContent = s.title;
-    body.textContent = s.body;
-    counter.textContent = `Step ${step + 1} of ${TUTORIAL_STEPS.length}`;
-    nextBtn.textContent = isLastTutorialStep(step) ? 'Got it' : 'Next';
+    title.textContent = t(`tutorial.${s.id}.title`);
+    body.textContent = t(`tutorial.${s.id}.body`);
+    counter.textContent = t('tutorial.counter', {
+      current: step + 1,
+      total: TUTORIAL_STEPS.length,
+    });
+    nextBtn.textContent = isLastTutorialStep(step) ? t('tutorial.gotIt') : t('tutorial.next');
+    skipBtn.textContent = t('tutorial.skip');
     nextBtn.setAttribute('aria-label', nextBtn.textContent);
   };
 
@@ -145,6 +150,10 @@ export function initTutorial() {
   if (shouldAutoShowTutorial(store.get(TUTORIAL_SEEN_KEY, false))) {
     requestAnimationFrame(() => show());
   }
+
+  onLocaleChange(() => {
+    if (open) renderStep();
+  });
 
   return { show, close };
 }

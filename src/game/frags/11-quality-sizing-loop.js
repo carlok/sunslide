@@ -46,8 +46,8 @@ addEventListener('pointerdown',()=>wakeRenderLoop(),{passive:true});
 addEventListener('keydown',()=>wakeRenderLoop());
 /* ---------- gamepad (standard mapping) ---------- */
 const PAD={idx:-1,prev:[],sel:-1};
-addEventListener('gamepadconnected',e=>{ PAD.idx=e.gamepad.index; PAD.sel=-1; say('Gamepad connected — stick to hop, LB/RB + A to slide',2200); });
-addEventListener('gamepaddisconnected',e=>{ if(e.gamepad.index===PAD.idx){ PAD.idx=-1; say('Gamepad disconnected',1200); } });
+addEventListener('gamepadconnected',e=>{ PAD.idx=e.gamepad.index; PAD.sel=-1; say(tr('toast.gamepadOn'),2200); });
+addEventListener('gamepaddisconnected',e=>{ if(e.gamepad.index===PAD.idx){ PAD.idx=-1; say(tr('toast.gamepadOff'),1200); } });
 function padChoices(){
   if(state!=='play'||tiles.some(t=>t.anim)) return [];
   const pt=tiles[player.t].slot;
@@ -58,12 +58,12 @@ function padSelectedId(){ if(PAD.idx<0) return -1; const ch=padChoices(); if(!ch
 function padSelect(dir){
   const ch=padChoices(); if(!ch.length) return;
   PAD.sel=((PAD.sel<0?0:PAD.sel)+dir+ch.length)%ch.length; const o=ch[PAD.sel];
-  say('Island '+tiles[o.id].num+(o.lit?' selected — A to slide':' is in the dark'),900); SFX.tick();
+  const num=tiles[o.id].num; say(o.lit?tr('toast.padPickLit',{num}):tr('toast.padPickDark',{num}),900); SFX.tick();
 }
 function padSlide(){
   const ch=padChoices(); if(!ch.length) return;
   const o=ch[clamp(PAD.sel,0,ch.length-1)], msg=trySlide(o.c,o.r);
-  if(msg){ say(msg,1200); SFX.nope(); } else PAD.sel=-1;
+  if(msg){ say(tr(msg),1200); SFX.nope(); } else PAD.sel=-1;
 }
 function pollPad(){
   const gps=navigator.getGamepads?navigator.getGamepads():[];

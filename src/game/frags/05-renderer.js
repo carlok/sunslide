@@ -509,7 +509,8 @@ function wireEcoPatchMat(mat){
   mat.onBeforeCompile=sh=>{
     sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 vEcoWp;')
       .replace('#include <worldpos_vertex>','#include <worldpos_vertex>\nvEcoWp=(modelMatrix*instanceMatrix*vec4(transformed,1.0)).xyz;');
-    sh.fragmentShader=sh.fragmentShader.replace('#include <color_fragment>',`#include <color_fragment>
+    sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 vEcoWp;')
+      .replace('#include <color_fragment>',`#include <color_fragment>
       float ecoN=fract(sin(dot(vEcoWp.xz,vec2(12.9898,78.233))+vEcoWp.y*0.37)*43758.5453);
       float ecoM=0.88+0.24*ecoN;
       float ecoR=length(vEcoWp.xz);

@@ -17,9 +17,12 @@ function sunslideGamePlugin() {
     load(id) {
       if (id !== virtualId) return;
       const frags = fragOrder
-        .map((f) =>
-          readFileSync(path.join(__dirname, 'src/game/frags', f), 'utf8'),
-        )
+        .map((f) => {
+          const file = path.join(__dirname, 'src/game/frags', f);
+          // Register each fragment so `npm run dev` reloads when one is edited.
+          this.addWatchFile(file);
+          return readFileSync(file, 'utf8');
+        })
         .join('\n\n');
       return `
 import * as THREE from 'three';

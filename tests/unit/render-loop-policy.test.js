@@ -10,7 +10,32 @@ describe('render-loop-policy', () => {
     expect(sceneNeedsAnimation({ gameState: 'title', paused: false, tilesAnimating: false })).toBe(true);
     expect(sceneNeedsAnimation({ gameState: 'play', paused: false, tilesAnimating: false })).toBe(true);
     expect(sceneNeedsAnimation({ gameState: 'play', paused: true, tilesAnimating: false })).toBe(false);
-    expect(sceneNeedsAnimation({ gameState: 'play', paused: true, tilesAnimating: true })).toBe(true);
+    // A slide frozen by pause doesn't move (update() is skipped), so it must not keep the loop awake.
+    expect(sceneNeedsAnimation({ gameState: 'play', paused: true, tilesAnimating: true })).toBe(false);
+    expect(sceneNeedsAnimation({ gameState: 'warp', paused: true, tilesAnimating: false })).toBe(false);
+    expect(sceneNeedsAnimation({ gameState: 'dying', paused: true, tilesAnimating: false })).toBe(false);
+    expect(sceneNeedsAnimation({ gameState: 'warp', paused: false, tilesAnimating: false })).toBe(true);
+  });
+
+  it('sleeps after one frame when paused mid-slide or mid-warp', () => {
+    for (const gameState of ['play', 'warp', 'dying']) {
+      const first = planRenderLoopFrame({
+        documentHidden: false,
+        gameState,
+        paused: true,
+        tilesAnimating: true,
+        renderedPaused: false,
+      });
+      expect(first).toMatchObject({ render: true, simulate: false, advanceClock: false });
+      const next = planRenderLoopFrame({
+        documentHidden: false,
+        gameState,
+        paused: true,
+        tilesAnimating: true,
+        renderedPaused: true,
+      });
+      expect(next).toEqual({ advanceClock: false, simulate: false, render: false, continueLoop: false });
+    }
   });
 
   it('stops loop when document is hidden', () => {

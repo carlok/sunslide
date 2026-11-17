@@ -4,9 +4,17 @@ try{ renderer=new THREE.WebGLRenderer({canvas:glc,antialias:true,powerPreference
 catch(e){ window.__ssFail('This browser has no WebGL, which Sunslide needs.'); throw e; }
 renderer.toneMapping=THREE.ACESFilmicToneMapping; renderer.toneMappingExposure=1.1;
 renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap; renderer.shadowMap.autoUpdate=false;
+// Fade the sun's shadows as the surface turns away from it. Near the terminator a wall a few cells
+// tall throws a shadow across half an island; on a tiny planet that reads as a giant dark slab rather
+// than a sunset. Midday shadows (N·L above ~0.3, sun higher than ~17°) are untouched.
+{
+  const SUN_SHADOW=/getShadow\( directionalShadowMap\[ i \], directionalLightShadow\.shadowMapSize, directionalLightShadow\.shadowBias, directionalLightShadow\.shadowRadius, vDirectionalShadowCoord\[ i \] \)/;
+  const chunk=THREE.ShaderChunk.lights_fragment_begin;
+  if(SUN_SHADOW.test(chunk)) THREE.ShaderChunk.lights_fragment_begin=chunk.replace(SUN_SHADOW,m=>`mix( 1.0, ${m}, smoothstep( 0.02, 0.3, dot( geometryNormal, directLight.direction ) ) )`);
+}
 const MAXANI=Math.min(8,renderer.capabilities.getMaxAnisotropy());
 glc.addEventListener('webglcontextlost',e=>{ e.preventDefault(); if(state==='play') setPaused(true); say(tr('toast.graphicsReset'),2500); });
-glc.addEventListener('webglcontextrestored',()=>{ qMode=Math.max(0,qLevel-1); qLevel=qMode; store.set('quality',qMode); location.reload(); });
+glc.addEventListener('webglcontextrestored',()=>{ try{ sessionStorage.setItem('sunslide.qCap',String(Math.max(0,qLevel-1))); }catch(e){} location.reload(); });
 const scene=new THREE.Scene(); scene.background=new THREE.Color('#04050d');
 const camera=new THREE.PerspectiveCamera(50,1,0.02,200);
 const U={time:{value:0},sun:{value:new THREE.Vector3(1,0,0)}};

@@ -18,7 +18,18 @@ function syncButtons(){
   $('qBtn').textContent=tr('pause.qualityLine',{label:qLabel});
 }
 const KEYS={ArrowUp:0,KeyW:0,ArrowRight:1,KeyD:1,ArrowDown:2,KeyS:2,ArrowLeft:3,KeyA:3};
+/** A modal UI layer (tutorial card, hamburger menu) owns the keyboard while it is open. */
+function uiModalOpen(){
+  const tut=document.getElementById('tutorialDialog'), menu=document.getElementById('menuPanel');
+  return !!((tut&&!tut.classList.contains('hide'))||(menu&&!menu.classList.contains('hide')));
+}
 addEventListener('keydown',e=>{
+  if(uiModalOpen()) return;
+  const t=e.target;
+  // Form controls keep their own keys (arrows change a select, Space ticks a checkbox).
+  if(t&&t.closest&&t.closest('input,select,textarea')) return;
+  // Enter/Space on a focused button is a native click; handling it here too started games twice.
+  if((e.code==='Enter'||e.code==='Space'||e.code==='NumpadEnter')&&t&&t.closest&&t.closest('button,a[href]')) return;
   if(KEYS[e.code]!==undefined){ e.preventDefault(); if(state==='title'){ startGame(); return; } if(!paused) want=KEYS[e.code]; return; }
   if(e.code==='Space'){ e.preventDefault(); setView(!viewFar); }
   else if(state==='win'){ /* win overlay handles Esc / Enter */ }
@@ -91,7 +102,7 @@ mapC.addEventListener('pointerdown',e=>{
   const c=Math.floor((x-mapG.pad)/mapG.cw), r=Math.floor((y-mapG.top)/mapG.ch);
   if(c<0||c>=COLS||r<0||r>=ROWS) return;
   const id=slotGrid[r][c]; if(id<0) return;
-  if(holeNeighbors().some(n=>n.c===c&&n.r===r)){ const msg=trySlide(c,r); if(msg){ say(msg,1200); SFX.nope(); } return; }
+  if(holeNeighbors().some(n=>n.c===c&&n.r===r)){ const msg=trySlide(c,r); if(msg){ say(tr(msg),1200); SFX.nope(); } return; }
   const T=tiles[id];
   if(waypoint===id){ waypoint=-1; say(tr('toast.waypointCleared'),800); SFX.tick(); return; }
   if(T.cleared){ say(tr('toast.waypointBloom',{num:T.num}),1000); return; }
@@ -114,10 +125,10 @@ $('resume').addEventListener('click',()=>setPaused(false));
 $('sBtn').addEventListener('click',()=>setMuted(!AU.muted));
 $('vBtn').addEventListener('click',()=>setView(!viewFar));
 $('restart').addEventListener('click',()=>{ setPaused(false); startGame(); });
-$('qBtn').addEventListener('click',()=>{ const order=['auto',2,1,0]; qMode=order[(order.indexOf(qMode)+1)%order.length]; store.set('quality',qMode); qLevel=qMode==='auto'?2:qMode; perfStart=performance.now(); applyQuality(); });
+$('qBtn').addEventListener('click',()=>{ const order=['auto',2,1,0]; qMode=order[(order.indexOf(qMode)+1)%order.length]; store.set('quality',qMode); qLevel=qLevelFor(qMode); perfStart=performance.now(); applyQuality(); });
 document.addEventListener('visibilitychange',()=>{
   if(document.hidden){
-    if(state==='play'||state==='warp') setPaused(true);
+    if(state==='play'||state==='warp'||state==='dying') setPaused(true);
     if(AUD.ac&&AUD.ac.state==='running') AUD.ac.suspend().catch(()=>{});
     return;
   }

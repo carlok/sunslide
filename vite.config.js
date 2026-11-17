@@ -124,7 +124,7 @@ function applySettings(s) {
   if (s.reducedMotion !== undefined) applyReducedFromSettings(s.reducedMotion);
   if (s.quality !== undefined) {
     qMode = s.quality;
-    qLevel = s.quality === 'auto' ? 2 : s.quality;
+    qLevel = qLevelFor(s.quality);
     perfStart = performance.now();
     applyQuality();
   }
@@ -285,7 +285,7 @@ export function startSunslide() {
     get sunLon() { return sunLon; },
     set sunLon(v) { sunLon = v; },
     get zoom() { return [zoomT, zoomTarget, viewFar]; },
-    setQuality(l) { qMode = l; qLevel = l === 'auto' ? 2 : l; applyQuality(); },
+    setQuality(l) { qMode = l; qLevel = qLevelFor(l); applyQuality(); },
     get greenedCount() { return ecologyCount(ecologyState); },
     get greenProgress() { return currentGreenPercent(); },
     get initialGreenTarget() { return initialGreenTarget; },

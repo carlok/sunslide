@@ -89,4 +89,18 @@ describe('shadows-policy', () => {
       }),
     ).toBe(true);
   });
+
+  it('never redraws the shadow map while paused, even mid-slide or mid-warp', () => {
+    for (const gameState of ['play', 'warp', 'dying', 'clear']) {
+      expect(
+        shouldUpdateShadowMap({ shadowsEnabled: true, gameState, paused: true, tilesAnimating: true }),
+      ).toBe(false);
+    }
+  });
+
+  it('skips shadow updates when shadows are disabled', () => {
+    expect(
+      shouldUpdateShadowMap({ shadowsEnabled: false, gameState: 'title', paused: false, tilesAnimating: true }),
+    ).toBe(false);
+  });
 });

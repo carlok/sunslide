@@ -52,6 +52,9 @@ export function resolveShadowSettings(ctx) {
  */
 export function shouldUpdateShadowMap(ctx) {
   if (!ctx.shadowsEnabled) return false;
+  // Nothing lit moves while paused; forced redraws (re-allocated map, capture poses) go through the
+  // renderer's shadowDirty flag instead.
+  if (ctx.paused) return false;
   if (ctx.tilesAnimating) return true;
   if (ctx.gameState === 'title' || ctx.gameState === 'over') return true;
   if (ctx.gameState === 'warp' || ctx.gameState === 'dying' || ctx.gameState === 'clear') return true;

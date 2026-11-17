@@ -1,4 +1,4 @@
-const QUAL=[{n:'Low',dpr:1,px:0.7e6,shadow:0,bloom:false,blades:7000,flowers:700,ff:200},{n:'Medium',dpr:1.5,px:1.4e6,shadow:1024,bloom:true,blades:15000,flowers:1500,ff:400},{n:'High',dpr:2,px:2.4e6,shadow:2048,bloom:true,blades:30000,flowers:2800,ff:600}];
+const QUAL=[{n:'Low',dpr:1,px:0.7e6,shadow:0,bloom:false,blades:7000,flowers:700,ff:200},{n:'Medium',dpr:1.5,px:1.4e6,shadow:1024,bloom:true,blades:15000,flowers:1500,ff:400},{n:'High',dpr:2,px:2.4e6,shadow:1024,bloom:true,blades:30000,flowers:2800,ff:600}];
 let qMode=store.get('quality','auto'); if(![ 'auto',0,1,2].includes(qMode)) qMode='auto';
 let qLevel=qMode==='auto'?2:qMode, pixelRatio=1, perfStart=performance.now(), perfAcc=0, perfN=0, renderedPaused=false;
 let adaptiveDprState=createAdaptiveDprState({ deviceDpr: window.devicePixelRatio||1 });
@@ -11,6 +11,8 @@ function applyQuality(){
   sunL.castShadow=sh.enabled;
   if(sh.enabled&&sunL.shadow.mapSize.x!==sh.mapSize){ sunL.shadow.mapSize.set(sh.mapSize,sh.mapSize); if(sunL.shadow.map){ sunL.shadow.map.dispose(); sunL.shadow.map=null; } }
   else if(!sh.enabled&&sunL.shadow.map){ sunL.shadow.map.dispose(); sunL.shadow.map=null; }
+  // A freed map renders as fully shadowed in three r160 until redrawn; force a redraw even if paused.
+  refreshShadowMap();
   blades.geometry.instanceCount=q.blades; flowers.count=q.flowers; ffPts.geometry.setDrawRange(0,q.ff);
   resize(); syncButtons();
 }

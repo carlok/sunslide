@@ -381,10 +381,9 @@ export function startSunslide() {
   },
   drawCaptureFrame() {
     syncScene(0, 0);
-    // Paused frames skip shadow redraws; the capture sun moved, so let this frame redraw it.
-    paused = false;
+    // Paused frames skip shadow redraws; the capture sun moved, so force one for this frame.
+    refreshShadowMap();
     render();
-    paused = true;
     return lastFrameDrawCalls;
   },
   releaseEcologyCaptureView() {

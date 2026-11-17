@@ -142,7 +142,8 @@ const flowers=new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1,0),new THR
 flowers.frustumCulled=false; scene.add(flowers);
 (function polarDecor(){
   const m=new THREE.Matrix4(), d=v3();
-  // Polar trees/rocks sit on a tight cap; at grazing sun they cast planet-spanning shadow-map streaks.
+  // Polar trees/rocks sit on a tight cap; at grazing sun they cast long thin streaks across the islands.
+  // (The planet-sized shadows once blamed on them came from the batched tile normals; see wireBatchSphereMat.)
   const inst=(geo,mat,n,shadow=false)=>{ const im=new THREE.InstancedMesh(geo,mat,n); im.castShadow=shadow; im.receiveShadow=true; im.frustumCulled=false; scene.add(im); return im; };
   const nT=150;
   const trunk=inst(new THREE.CylinderGeometry(0.12,0.18,1,6).translate(0,0.5,0),new THREE.MeshStandardMaterial({color:'#6b4a2e',roughness:0.9}),nT);
@@ -213,8 +214,11 @@ function wireBatchSphereMat(mat,kind){
   mat.onBeforeCompile=sh=>{
     sh.uniforms.uTileOff={value:uTileOff};
     sh.uniforms.uTileLift={value:uTileLift};
+    // vTileId must be set before SPH_NORMAL_BATCH: three runs beginnormal_vertex before begin_vertex, and an
+    // unset vTileId lit every island with tile 0's normals (dark islands at noon, lit night side, and walls
+    // casting planet-spanning shadows through the non-casting meadow). Depth shaders only reach begin_vertex.
     sh.vertexShader=sh.vertexShader.replace('#include <common>',`#include <common>\n${SPH_HEAD_BATCH}`)
-      .replace('#include <beginnormal_vertex>',SPH_NORMAL_BATCH)
+      .replace('#include <beginnormal_vertex>',`vTileId=batchId;\n${SPH_NORMAL_BATCH}`)
       .replace('#include <begin_vertex>',`vTileId=batchId;\n${SPH_POS_BATCH}`);
     if(kind==='floor'){
       sh.uniforms.uFloorEmissive={value:uFloorEmissive};
@@ -238,7 +242,7 @@ totalEmissiveRadiance=uLampEmissive[int(vTileId+0.5)]*uLampEmissiveI[int(vTileId
 #endif`);
     }
   };
-  mat.customProgramCacheKey=()=>'sphere-tile-batch-'+kind;
+  mat.customProgramCacheKey=()=>'sphere-tile-batch-v2-'+kind;
   return mat;
 }
 function buildFloorAtlas(){
@@ -281,8 +285,11 @@ function estimateTilePools(){
 function resetTileBatches(){
   if(!floorBatch) return;
   scene.remove(floorBatch,wallBatch,lampBatch,slabBatch);
-  floorBatch.geometry.dispose(); wallBatch.geometry.dispose(); lampBatch.geometry.dispose(); slabBatch.geometry.dispose();
-  floorBatch.material.dispose(); wallBatch.material.dispose(); lampBatch.material.dispose(); slabBatch.material.dispose();
+  for(const b of [floorBatch,wallBatch,lampBatch,slabBatch]){
+    b.dispose(); // BatchedMesh.dispose frees the geometry and its per-instance matrices texture
+    b.customDepthMaterial?.dispose();
+    b.material.dispose();
+  }
   floorAtlasTex?.dispose(); floorAtlasTex=null;
   floorBatch=wallBatch=lampBatch=slabBatch=null;
 }
@@ -294,12 +301,15 @@ function ensureTileBatches(){
   const wallMat=wireBatchSphereMat(new THREE.MeshStandardMaterial({vertexColors:true,roughness:0.82,emissive:'#000'}),'wall');
   const lampMat=wireBatchSphereMat(new THREE.MeshStandardMaterial({color:'#fff3cf',emissive:'#ffb24a',emissiveIntensity:1,roughness:0.3}),'lamp');
   const slabMat=wireBatchSphereMat(new THREE.MeshStandardMaterial({vertexColors:true,roughness:1,shadowSide:THREE.DoubleSide}),'slab');
-  wallMat.customDepthMaterial=wireBatchSphereMat(new THREE.MeshDepthMaterial({depthPacking:THREE.RGBADepthPacking}),'wall');
-  slabMat.customDepthMaterial=wireBatchSphereMat(new THREE.MeshDepthMaterial({depthPacking:THREE.RGBADepthPacking}),'slab');
   floorBatch=new THREE.BatchedMesh(NT,pools.floor.v,pools.floor.i,floorMat);
   wallBatch=new THREE.BatchedMesh(NT,pools.walls.v,pools.walls.i,wallMat);
   lampBatch=new THREE.BatchedMesh(NT,pools.lamps.v,pools.lamps.i,lampMat);
   slabBatch=new THREE.BatchedMesh(NT,pools.slab.v,pools.slab.i,slabMat);
+  // three reads customDepthMaterial from the mesh, not the material. Without the sphere-mapped depth
+  // material the shadow pass drew the raw flat tile geometry (all 15 mazes stacked near the planet's
+  // core), which threw maze-shaped streaks across the islands while real walls cast no shadow at all.
+  wallBatch.customDepthMaterial=wireBatchSphereMat(new THREE.MeshDepthMaterial({depthPacking:THREE.RGBADepthPacking}),'wall');
+  slabBatch.customDepthMaterial=wireBatchSphereMat(new THREE.MeshDepthMaterial({depthPacking:THREE.RGBADepthPacking}),'slab');
   for(const b of [floorBatch,wallBatch,lampBatch,slabBatch]){ b.frustumCulled=false; b.receiveShadow=true; scene.add(b); }
   floorBatch.castShadow=false; wallBatch.castShadow=slabBatch.castShadow=true; lampBatch.castShadow=false;
 }

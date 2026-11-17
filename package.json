@@ -13,6 +13,7 @@
     "test:smoke": "node tests/smoke.mjs",
     "lint": "eslint src/logic tests scripts",
     "hero": "node scripts/capture-hero.mjs",
+    "shadow:repro": "node scripts/shadow-repro.mjs",
     "i18n:screenshots": "node scripts/i18n-screenshots.mjs",
     "audit:quality": "node scripts/quality-audit.mjs",
     "lhci": "lhci autorun && lhci autorun --config=lighthouserc-desktop.cjs"

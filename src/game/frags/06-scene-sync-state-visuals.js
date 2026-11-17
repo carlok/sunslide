@@ -192,13 +192,19 @@ function syncScene(time,dt){
   pMat.uniforms.uPx.value=ffMat.uniforms.uPx.value=glc.height/(2*Math.tan(camera.fov*DEG/2));
 }
 let useBloom=true;
+// Set when the shadow map must be redrawn on the next render regardless of policy (map re-allocated,
+// sun or tiles moved while paused). Without it, render() overwrote refreshShadowMap()'s request.
+let shadowDirty=true;
 function refreshShadowMap(){
-  if(sunL.castShadow) renderer.shadowMap.needsUpdate=true;
+  shadowDirty=true;
 }
 function render(){
   renderer.info.autoReset=false;
   renderer.info.reset();
-  if(sunL.castShadow) renderer.shadowMap.needsUpdate=shouldUpdateShadowMap({shadowsEnabled:true,gameState:state,paused,tilesAnimating:tiles.some(t=>t.anim)});
+  if(sunL.castShadow){
+    renderer.shadowMap.needsUpdate=shadowDirty||shouldUpdateShadowMap({shadowsEnabled:true,gameState:state,paused,tilesAnimating:tiles.some(t=>t.anim)});
+    shadowDirty=false;
+  }
   if(useBloom&&composer) composer.render();
   else if(useBloom&&!composer) { ensurePostPipeline(); renderer.render(scene,camera); }
   else renderer.render(scene,camera);

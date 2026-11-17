@@ -535,6 +535,59 @@ try {
         fail(`${name}: pixelRatio ${metrics.pixelRatio} too low for bloom on large stage`);
       }
     }
+    if (name === 'desktop') {
+      // Regression: batched island normals once used tile 0's frame for every tile, so the island on
+      // the far side of the planet from tile 0 went dark under its own noon sun and lit up at night,
+      // and walls threw planet-sized shadows onto the wrongly lit side. Far view, centred on that
+      // island: the disc must be much brighter with the sun behind the camera than behind the planet.
+      const lit = await page.evaluate(() => {
+        const S = window.__sunslide;
+        const grid = S.slotGrid;
+        let r0 = 0;
+        let c0 = 0;
+        grid.forEach((row, r) => row.forEach((id, c) => { if (id === 0) { r0 = r; c0 = c; } }));
+        const farCol = (c0 + 2) % grid[0].length; // two slot columns = 180° of longitude
+        let far = -1;
+        for (const dr of [0, 1, -1, 2, -2, 3, -3]) {
+          const r = r0 + dr;
+          if (r >= 0 && r < grid.length && grid[r][farCol] >= 0) { far = grid[r][farCol]; break; }
+        }
+        if (far < 0) return { far };
+        const cv = document.createElement('canvas');
+        cv.width = 160;
+        cv.height = 100;
+        const cx = cv.getContext('2d', { willReadFrequently: true });
+        const gl = document.getElementById('gl');
+        const discLuma = (sunSide) => {
+          const v = S.setEcologyCaptureView(far, 'day'); // paused capture hold: the pose can't drift
+          S.setCamPose({
+            camLon: v.camLon,
+            camLat: v.camLat + 0.14,
+            sunLon: sunSide === 'front' ? v.camLon : v.camLon + Math.PI,
+            zoomT: 1,
+            zoomTarget: 1,
+            viewFar: true,
+          });
+          for (let i = 0; i < 3; i++) S.drawCaptureFrame();
+          // Read back in the same task as the render (no preserveDrawingBuffer needed).
+          cx.drawImage(gl, 0, 0, cv.width, cv.height);
+          const d = cx.getImageData(56, 32, 48, 36).data; // centre of the planet disc
+          let s = 0;
+          for (let i = 0; i < d.length; i += 4) s += (d[i] + d[i + 1] + d[i + 2]) / 3;
+          return s / (d.length / 4);
+        };
+        const out = { far, front: discLuma('front'), back: discLuma('back') };
+        S.releaseEcologyCaptureView();
+        return out;
+      });
+      console.log(name, 'tile-lighting', lit);
+      if (lit.far < 0) fail(`${name}: no island found opposite tile 0 ${JSON.stringify(lit)}`);
+      else if (!(lit.front > 90 && lit.front > lit.back * 1.6)) {
+        fail(
+          `${name}: island lighting inverted or dark (sun in front ${lit.front.toFixed(1)}, sun behind planet ${lit.back.toFixed(1)})`,
+        );
+      }
+    }
     if (errors.length) fail(`${name}: console errors\n  ` + errors.slice(0, 5).join('\n  '));
     await ctx.close();
   }

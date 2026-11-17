@@ -1,6 +1,8 @@
 /** Settings controls inside the hamburger menu. */
 import { createStore } from './logic/store.js';
 import { settingsFromStore, writeSettings } from './logic/settings.js';
+import { applyDomI18n } from './i18n/dom.js';
+import { getLocale, onLocaleChange, setLocale, t } from './i18n/index.js';
 
 export function initSettingsMenu() {
   const root = document.getElementById('menuSettings');
@@ -14,6 +16,7 @@ export function initSettingsMenu() {
     quality: document.getElementById('setQuality'),
     reducedMotion: document.getElementById('setReducedMotion'),
     colorBlind: document.getElementById('setColorBlind'),
+    lang: document.getElementById('setLang'),
   };
 
   const applyToGame = (patch) => {
@@ -38,6 +41,7 @@ export function initSettingsMenu() {
         s.reducedMotion === null ? 'system' : s.reducedMotion ? 'on' : 'off';
     }
     if (el.colorBlind) el.colorBlind.checked = s.colorBlind;
+    if (el.lang) el.lang.value = getLocale();
   };
 
   const onSound = () => applyToGame({ sound: !!el.sound?.checked });
@@ -54,6 +58,13 @@ export function initSettingsMenu() {
     applyToGame({ reducedMotion });
   };
   const onColorBlind = () => applyToGame({ colorBlind: !!el.colorBlind?.checked });
+  const onLang = () => {
+    if (el.lang?.value) setLocale(el.lang.value);
+    applyDomI18n(t);
+    window.__sunslide?.refreshHud?.();
+    window.__sunslide?.syncPauseButtons?.();
+    if (typeof window.__ssRefreshTitleStars === 'function') window.__ssRefreshTitleStars();
+  };
 
   el.sound?.addEventListener('change', onSound);
   el.music?.addEventListener('change', onMusic);
@@ -61,6 +72,9 @@ export function initSettingsMenu() {
   el.quality?.addEventListener('change', onQuality);
   el.reducedMotion?.addEventListener('change', onReduced);
   el.colorBlind?.addEventListener('change', onColorBlind);
+  el.lang?.addEventListener('change', onLang);
+
+  onLocaleChange(() => syncUi());
 
   const menuBtn = document.getElementById('menuBtn');
   menuBtn?.addEventListener('click', () => {

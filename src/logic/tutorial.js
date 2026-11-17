@@ -3,24 +3,9 @@
 export const TUTORIAL_SEEN_KEY = 'tutorialSeen';
 
 export const TUTORIAL_STEPS = [
-  {
-    id: 'slide',
-    title: 'Slide the meadow islands',
-    body:
-      'This is a sunlit 15-puzzle: tap a glowing island next to the empty meadow (on the planet or the map) to slide that tile into the gap. Only lit islands move.',
-  },
-  {
-    id: 'bubbles',
-    title: 'Pop bubbles, grow green',
-    body:
-      'Hop over bubbles to collect them. Each bubble you clear helps that island bloom — the tile turns greener as meadows spread.',
-  },
-  {
-    id: 'goal',
-    title: 'Your goal',
-    body:
-      'Slide every island to its home slot (1–15), wake bats with sunlight, and clear all bubbles to finish the sector. Then hop onward to the next.',
-  },
+  { id: 'slide' },
+  { id: 'bubbles' },
+  { id: 'goal' },
 ];
 
 export function shouldAutoShowTutorial(seen) {

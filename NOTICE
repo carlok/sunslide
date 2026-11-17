@@ -1,0 +1,20 @@
+Sunslide — third-party notices
+
+## Korean translation (ko UI strings)
+
+Korean user-interface strings are derived from the community fork
+[sigco3111/sunslide-ko](https://github.com/sigco3111/sunslide-ko),
+distributed under the Apache License 2.0. The fork was used as the
+basis for `src/i18n/messages/ko.js` with adjustments for the main-line
+game. Copyright in that translation remains with its original
+contributors; see the fork repository for history.
+
+English and Italian strings are authored for this repository under
+Apache-2.0 (see LICENSE).
+
+## Other dependencies
+
+- [three.js](https://threejs.org/) — MIT (npm dependency)
+- [Vite](https://vitejs.dev/) — MIT (dev dependency)
+
+See README and package.json for the full dependency list.

@@ -1,3 +1,20 @@
+body.locale-ko,
+body.locale-ko button,
+body.locale-ko select,
+body.locale-ko input,
+body.locale-ko label,
+body.locale-ko p,
+body.locale-ko h1,
+body.locale-ko h2,
+body.locale-ko h3,
+body.locale-ko span,
+body.locale-ko li,
+body.locale-ko small,
+body.locale-ko dt,
+body.locale-ko dd {
+  font-family: 'Noto Sans KR', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
 :root{--bg:#04050d;--ink:#eef2ff;--dim:#a8b2d9;--gold:#ffd25e;--teal:#3fd6ea;--panel:#0c1130;--line:#28316a;--touch-min:44px}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font:14px/1.35 system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;overflow:hidden;overscroll-behavior:none;-webkit-user-select:none;user-select:none}

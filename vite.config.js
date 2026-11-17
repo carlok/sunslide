@@ -98,6 +98,7 @@ import {
   syncAdaptiveCap,
   tickAdaptiveDpr,
 } from './src/logic/adaptive-pixel-ratio.js';
+import { t as tr } from './src/i18n/index.js';
 
 const settingsStore = createStore();
 const haptics = createHaptics();
@@ -180,7 +181,12 @@ export function startSunslide() {
     get state() { return state; },
     update,
     refreshHud() {
+      hudKey = '';
+      greenHudKey = '';
       if (typeof hud === 'function') hud();
+    },
+    syncPauseButtons() {
+      if (typeof syncButtons === 'function') syncButtons();
     },
     showClearStarsForTest(o = {}) {
       const payload = {

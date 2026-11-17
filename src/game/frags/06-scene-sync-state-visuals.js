@@ -27,10 +27,14 @@ function syncEcology(){
   const growT=ECOLOGY.growSeconds;
   for(const cell of ecologyState.byCell.values()){
     const T=tiles[cell.tileId]; if(!T) continue;
-    const p=tilePos(T), lf=liftOf(T), g=smooth(clamp((gameClock-cell.growAt)/growT,0,1)), pop=0.1+0.9*g;
+    const p=tilePos(T), lf=liftOf(T), g=ecologyGrowFactor(gameClock-cell.growAt,growT), pop=0.08+0.92*g;
     frameAt(p.x+cell.x+0.5,p.y+cell.y+0.5);
     surfMatrix(_M,_R,0,CELL_TANGENT.sx*pop,PATCH_THICK*pop,CELL_TANGENT.sz*pop,1+lf+PATCH_LIFT*pop);
-    ecoPatches.setMatrixAt(pi++,_M);
+    const rgb=ecologyPatchRgb(cell.tileId,cell.x,cell.y);
+    _ecoCellCol.setRGB(rgb.r,rgb.g,rgb.b);
+    ecoPatches.setColorAt(pi,_ecoCellCol);
+    ecoPatches.setMatrixAt(pi,_M);
+    pi++;
     for(const d of cell.decor){
       const off=decorLocalOffset(d);
       const gx=p.x+cell.x+0.5+off.x, gy=p.y+cell.y+0.5+off.y;
@@ -54,6 +58,7 @@ function syncEcology(){
   }
   ecoPatches.count=pi; ecoGrass.count=gi; ecoFlower.count=fi; ecoTreeTrunk.count=ti; ecoTreeTop.count=ttop;
   ecoPatches.instanceMatrix.needsUpdate=pi>0;
+  if(pi>0&&ecoPatches.instanceColor) ecoPatches.instanceColor.needsUpdate=true;
   ecoGrass.instanceMatrix.needsUpdate=gi>0;
   ecoFlower.instanceMatrix.needsUpdate=fi>0;
   ecoTreeTrunk.instanceMatrix.needsUpdate=ti>0;

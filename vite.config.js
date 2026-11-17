@@ -38,6 +38,8 @@ import {
   decorLocalOffset,
   decorTangentScale,
   cellFootprintTangent,
+  ecologyPatchRgb,
+  ecologyGrowFactor,
 } from './src/logic/ecology.js';
 import { createAmbientController } from './src/ambient-audio.js';
 import { ambientLayerGains } from './src/logic/ambient-green.js';

@@ -126,6 +126,42 @@ export function planCellDecor(tileId, x, y) {
   return decor.slice(0, ECOLOGY.maxDecorPerCell);
 }
 
+/** 0–1 HSL green meadow base (seeded per maze cell). */
+export function ecologyPatchColor(tileId, x, y) {
+  const h = 0.3 + (rng(tileId, x, y, 90) - 0.5) * 0.16;
+  const s = 0.38 + rng(tileId, x, y, 91) * 0.32;
+  const l = 0.34 + rng(tileId, x, y, 92) * 0.16;
+  return { h, s, l };
+}
+
+function hslChannel(p, q, t) {
+  if (t < 0) t += 1;
+  if (t > 1) t -= 1;
+  if (t < 1 / 6) return p + (q - p) * 6 * t;
+  if (t < 1 / 2) return q;
+  if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
+  return p;
+}
+
+/** Linear RGB 0–1 for THREE.Color / tests. */
+export function ecologyPatchRgb(tileId, x, y) {
+  const { h, s, l } = ecologyPatchColor(tileId, x, y);
+  if (s <= 0.0001) return { r: l, g: l, b: l };
+  const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+  const p = 2 * l - q;
+  return {
+    r: hslChannel(p, q, h + 1 / 3),
+    g: hslChannel(p, q, h),
+    b: hslChannel(p, q, h - 1 / 3),
+  };
+}
+
+/** Smooth 0–1 grow factor from seconds since pop. */
+export function ecologyGrowFactor(elapsedSeconds, growSeconds = ECOLOGY.growSeconds) {
+  const t = Math.max(0, Math.min(1, elapsedSeconds / growSeconds));
+  return t * t * (3 - 2 * t);
+}
+
 export function markBubbleCollected(state, tileId, x, y, growAt = 0) {
   if (tileId < 0 || tileId >= NT || x < 0 || x >= TW || y < 0 || y >= TH) return false;
   const key = cellKey(tileId, x, y);

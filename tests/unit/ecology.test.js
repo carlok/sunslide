@@ -10,6 +10,9 @@ import {
   createEcologyState,
   decorInsideCell,
   ecologyCount,
+  ecologyGrowFactor,
+  ecologyPatchColor,
+  ecologyPatchRgb,
   markBubbleCollected,
   planCellDecor,
 } from '../../src/logic/ecology.js';
@@ -53,6 +56,26 @@ describe('ecology', () => {
     expect(fp.sz).toBeLessThan(CH * 1.02);
     expect(CELL_TANGENT.sx).toBeCloseTo(fp.sx);
     expect(fp.thick).toBeLessThan(0.01);
+  });
+
+  it('patch colors vary per cell but stay stable and meadow-green', () => {
+    const a = ecologyPatchRgb(2, 3, 1);
+    const b = ecologyPatchRgb(2, 3, 1);
+    const c = ecologyPatchRgb(2, 4, 1);
+    expect(a).toEqual(b);
+    expect(a.g).toBeGreaterThan(a.r);
+    expect(a.g).toBeGreaterThan(a.b);
+    expect(c).not.toEqual(a);
+    const hsl = ecologyPatchColor(2, 3, 1);
+    expect(hsl.h).toBeGreaterThan(0.2);
+    expect(hsl.h).toBeLessThan(0.45);
+  });
+
+  it('grow factor eases in over growSeconds', () => {
+    expect(ecologyGrowFactor(0)).toBe(0);
+    expect(ecologyGrowFactor(ECOLOGY.growSeconds)).toBe(1);
+    expect(ecologyGrowFactor(ECOLOGY.growSeconds * 0.5)).toBeGreaterThan(0.4);
+    expect(ecologyGrowFactor(ECOLOGY.growSeconds * 0.5)).toBeLessThan(0.7);
   });
 
   it('planned decor stays inside the cell with low height', () => {

@@ -504,9 +504,26 @@ const gems=inst(new THREE.OctahedronGeometry(1,0),new THREE.MeshStandardMaterial
 
 /* ---------- ecology: bubble-pop green cells (instanced, capped) ---------- */
 const ECO_PATCH_MAX=ECOLOGY.maxCells;
-const ecoPatchMat=new THREE.MeshStandardMaterial({color:'#4caf5a',roughness:0.9,emissive:'#1e3d24',emissiveIntensity:0.12});
+const _ecoPatchBase=new THREE.Color('#4caf5a');
+function wireEcoPatchMat(mat){
+  mat.onBeforeCompile=sh=>{
+    sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 vEcoWp;')
+      .replace('#include <worldpos_vertex>','#include <worldpos_vertex>\nvEcoWp=(modelMatrix*instanceMatrix*vec4(transformed,1.0)).xyz;');
+    sh.fragmentShader=sh.fragmentShader.replace('#include <color_fragment>',`#include <color_fragment>
+      float ecoN=fract(sin(dot(vEcoWp.xz,vec2(12.9898,78.233))+vEcoWp.y*0.37)*43758.5453);
+      float ecoM=0.88+0.24*ecoN;
+      float ecoR=length(vEcoWp.xz);
+      float ecoEdge=smoothstep(0.52,0.36,ecoR);
+      diffuseColor.rgb*=ecoM*(0.82+0.18*ecoEdge);`);
+  };
+  mat.customProgramCacheKey=()=>'eco-patch-mottle';
+}
+const ecoPatchMat=new THREE.MeshStandardMaterial({color:_ecoPatchBase,roughness:0.92,emissive:'#142816',emissiveIntensity:0.08});
+wireEcoPatchMat(ecoPatchMat);
 const ecoPatches=inst(new THREE.BoxGeometry(1,1,1),ecoPatchMat,ECO_PATCH_MAX,0);
 ecoPatches.receiveShadow=true;
+ecoPatches.instanceColor=new THREE.InstancedBufferAttribute(new Float32Array(ECO_PATCH_MAX*3),3);
+const _ecoCellCol=new THREE.Color();
 const ecoGrass=inst(new THREE.CylinderGeometry(0.35,0.45,1,4),new THREE.MeshStandardMaterial({color:'#6ec454',roughness:0.85}),ECOLOGY.maxDecorTotal,1);
 const ecoFlower=inst(new THREE.IcosahedronGeometry(0.35,0),new THREE.MeshStandardMaterial({color:'#ffb8d8',roughness:0.55,emissive:'#55152a',emissiveIntensity:0.25}),ECOLOGY.maxDecorTotal,1);
 const ecoTreeTrunk=inst(new THREE.CylinderGeometry(0.2,0.24,0.5,5),new THREE.MeshStandardMaterial({color:'#7a5a3a',roughness:0.95}),ECOLOGY.maxDecorTotal,1);

@@ -3,6 +3,7 @@ let tiles=[], slotGrid=[];
 let score=0, lives=3, level=1, dotsLeft=0, scoreBest=store.get('scoreBest',0), nextLife=CFG.lifeEvery;
 let runMoves=0, runTimeMs=0;
 let sunLon=0, gameClock=0;
+let ecologyCaptureHold=false, ecologyCaptureSkyDay=1;
 let sink=null, sinkTimer=14, warpT=0, warpDest=null, warped=false, exitFx=null;
 let combo=0, comboT=9, berry=null, berryTimer=25, boostT=0, waypoint=-1, shakeT=0, deaths=0;
 let want=-1, cooldown=0, readyT=0, invuln=0, fright=0, chain=0, dyingT=0, clearT=0;

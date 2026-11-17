@@ -29,7 +29,8 @@ function syncEcology(){
     const T=tiles[cell.tileId]; if(!T) continue;
     const p=tilePos(T), lf=liftOf(T), g=ecologyGrowFactor(gameClock-cell.growAt,growT), pop=0.08+0.92*g;
     frameAt(p.x+cell.x+0.5,p.y+cell.y+0.5);
-    surfMatrix(_M,_R,0,CELL_TANGENT.sx*pop,PATCH_THICK*pop,CELL_TANGENT.sz*pop,1+lf+PATCH_LIFT*pop);
+    const patchS=0.68*pop;
+    surfMatrix(_M,_R,hash(cell.tileId,cell.x,cell.y)*TAU*0.3,CELL_TANGENT.sx*patchS,PATCH_THICK*0.35,CELL_TANGENT.sz*patchS,1+lf+PATCH_LIFT*pop);
     const rgb=ecologyPatchRgb(cell.tileId,cell.x,cell.y);
     _ecoCellCol.setRGB(rgb.r,rgb.g,rgb.b);
     ecoPatches.setColorAt(pi,_ecoCellCol);

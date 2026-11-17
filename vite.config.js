@@ -201,6 +201,44 @@ export function startSunslide() {
       };
     },
     startGame,
+    beginDeterministicRun(seed = 0xec0107ec) {
+      let a = seed >>> 0;
+      const rng = () => {
+        a = (a + 0x6d2b79f5) | 0;
+        let t = Math.imul(a ^ (a >>> 15), 1 | a);
+        t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+      const orig = Math.random;
+      Math.random = rng;
+      try {
+        if (useBloom && typeof ensurePostPipeline === 'function') ensurePostPipeline();
+        score = 0;
+        lives = 3;
+        level = 1;
+        nextLife = CFG.lifeEvery;
+        runMoves = 0;
+        runTimeMs = 0;
+        deaths = 0;
+        newLevel();
+      } finally {
+        Math.random = orig;
+      }
+      if (typeof window.__ssHideClearStars === 'function') window.__ssHideClearStars();
+      if (typeof window.__ssRefreshTitleStars === 'function') window.__ssRefreshTitleStars();
+      state = 'play';
+      readyT = 0;
+      invuln = 1e9;
+      zoomT = 1;
+      perfStart = performance.now();
+      if (typeof refreshShadowMap === 'function') refreshShadowMap();
+      $('ov').classList.add('hide');
+      $('wBlock').classList.add('hide');
+      $('tBlock').classList.add('hide');
+      $('oBlock').classList.add('hide');
+      $('pause').classList.add('hide');
+      if (typeof syncAmbientGreen === 'function') syncAmbientGreen();
+    },
     goTitle,
     showWinForTest(o = {}) {
       state = 'win';

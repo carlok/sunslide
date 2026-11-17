@@ -507,21 +507,31 @@ const ECO_PATCH_MAX=ECOLOGY.maxCells;
 const _ecoPatchBase=new THREE.Color('#4caf5a');
 function wireEcoPatchMat(mat){
   mat.onBeforeCompile=sh=>{
-    sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 vEcoWp;')
+    sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 vEcoWp;\nvarying vec2 vEcoLocal;')
+      .replace('#include <begin_vertex>',`#include <begin_vertex>
+      vEcoLocal=vec2(position.x,position.z);`)
       .replace('#include <worldpos_vertex>','#include <worldpos_vertex>\nvEcoWp=(modelMatrix*instanceMatrix*vec4(transformed,1.0)).xyz;');
-    sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 vEcoWp;')
+    sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 vEcoWp;\nvarying vec2 vEcoLocal;')
       .replace('#include <color_fragment>',`#include <color_fragment>
       float ecoN=fract(sin(dot(vEcoWp.xz,vec2(12.9898,78.233))+vEcoWp.y*0.37)*43758.5453);
-      float ecoM=0.88+0.24*ecoN;
-      float ecoR=length(vEcoWp.xz);
-      float ecoEdge=smoothstep(0.52,0.36,ecoR);
-      diffuseColor.rgb*=ecoM*(0.82+0.18*ecoEdge);`);
+      float ecoN2=fract(sin(dot(vEcoWp.xz,vec2(39.3468,11.135))+vEcoWp.y*1.9)*28441.117);
+      float ecoM=0.72+0.42*ecoN+0.12*ecoN2;
+      float r=length(vEcoLocal);
+      float soft=1.0-smoothstep(0.28,0.52,r);
+      soft*=1.0-smoothstep(0.38,0.5,max(abs(vEcoLocal.x),abs(vEcoLocal.y)));
+      float speck=0.86+0.28*fract(ecoN*17.0+ecoN2*3.0);
+      diffuseColor.rgb*=ecoM*speck*soft;`);
   };
-  mat.customProgramCacheKey=()=>'eco-patch-mottle';
+  mat.customProgramCacheKey=()=>'eco-patch-mottle-v2';
 }
-const ecoPatchMat=new THREE.MeshStandardMaterial({color:_ecoPatchBase,roughness:0.92,emissive:'#142816',emissiveIntensity:0.08});
+const ecoPatchMat=new THREE.MeshStandardMaterial({
+  color:0xffffff,vertexColors:true,roughness:0.94,metalness:0,emissive:'#0a180c',emissiveIntensity:0.06,
+  side:THREE.DoubleSide,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2,
+});
 wireEcoPatchMat(ecoPatchMat);
-const ecoPatches=inst(new THREE.BoxGeometry(1,1,1),ecoPatchMat,ECO_PATCH_MAX,0);
+const ecoPatchGeo=new THREE.PlaneGeometry(1,1,1,1);
+ecoPatchGeo.rotateX(-Math.PI/2);
+const ecoPatches=inst(ecoPatchGeo,ecoPatchMat,ECO_PATCH_MAX,1);
 ecoPatches.receiveShadow=true;
 ecoPatches.instanceColor=new THREE.InstancedBufferAttribute(new Float32Array(ECO_PATCH_MAX*3),3);
 const _ecoCellCol=new THREE.Color();

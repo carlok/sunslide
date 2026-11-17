@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Matched before/after ecology floor captures: same tile, camera pose, and bubble pops.
+ * Matched before/after ecology floor captures: fixed PRNG seed, same tile, camera, pops.
  * Requires `npm run build` first. Set ECOLOGY_LABEL=before|after for output names.
  */
 import { chromium } from 'playwright';
@@ -15,6 +15,8 @@ const outDir = path.resolve(process.env.ECOLOGY_CAPTURE_DIR || '/opt/cursor/arti
 const outFull = path.join(outDir, `ecology-floor-${label}.png`);
 const outCrop = path.join(outDir, `ecology-floor-${label}-crop.png`);
 mkdirSync(outDir, { recursive: true });
+
+const CAPTURE_SEED = Number(process.env.ECOLOGY_CAPTURE_SEED || 0xec0107ec);
 
 if (!existsSync(path.join(root, 'dist', 'index.html'))) {
   console.error('Run npm run build first');
@@ -72,7 +74,30 @@ await page.addInitScript(() => {
 await page.goto(baseUrl, { waitUntil: 'networkidle' });
 await page.waitForFunction(() => !!window.__sunslide?.setCamPose, null, { timeout: 30000 });
 
-await page.evaluate(() => window.__sunslide.startGame());
+await page.evaluate((seed) => {
+  const S = window.__sunslide;
+  if (typeof S.beginDeterministicRun === 'function') {
+    S.beginDeterministicRun(seed);
+    return;
+  }
+  let a = seed >>> 0;
+  const rng = () => {
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  const orig = Math.random;
+  Math.random = rng;
+  try {
+    S.startGame();
+  } finally {
+    Math.random = orig;
+  }
+  S.inv = 1e9;
+  for (let i = 0; i < 90; i++) S.update(1 / 60);
+}, CAPTURE_SEED);
+
 await page.evaluate(() => window.__sunslide.setQuality(2));
 await page.evaluate(() => {
   window.__sunslide.inv = 1e9;
@@ -82,39 +107,43 @@ if (await page.locator('#tutorialSkip').isVisible().catch(() => false)) {
   await page.click('#tutorialSkip');
 }
 
+const layout = await page.evaluate((focusTile) => {
+  const T = window.__sunslide.tiles[focusTile];
+  if (!T) return null;
+  let walls = 0;
+  let open = 0;
+  let bubbles = 0;
+  for (let y = 0; y < 4; y++) {
+    for (let x = 0; x < 8; x++) {
+      const i = y * 8 + x;
+      if (T.walls[i]) walls++;
+      else open++;
+      if (T.dots[i] === 1) bubbles++;
+    }
+  }
+  return { tileId: focusTile, walls, open, bubbles };
+}, FOCUS_TILE);
+
 const pops = await page.evaluate((focusTile) => {
-  const S = window.__sunslide;
-  const tileIds = new Set([focusTile, S.player?.t ?? focusTile]);
   const out = [];
-  for (const tid of tileIds) {
-    const T = S.tiles[tid];
-    if (!T) continue;
-    for (let i = 0; i < 32; i++) {
-      if (T.dots[i] === 1) out.push([tid, i % 8, (i / 8) | 0]);
+  const T = window.__sunslide.tiles[focusTile];
+  if (!T) return out;
+  for (let y = 0; y < 4; y++) {
+    for (let x = 0; x < 8; x++) {
+      const i = y * 8 + x;
+      if (T.dots[i] !== 1) continue;
+      out.push([focusTile, x, y]);
     }
   }
-  if (out.length < 10) {
-    for (const T of S.tiles) {
-      for (let i = 0; i < 32; i++) {
-        if (T.dots[i] !== 1) continue;
-        const p = [T.id, i % 8, (i / 8) | 0];
-        if (!out.some((q) => q[0] === p[0] && q[1] === p[1] && q[2] === p[2])) out.push(p);
-        if (out.length >= 18) break;
-      }
-      if (out.length >= 18) break;
-    }
-  }
+  out.sort((a, b) => a[2] - b[2] || a[1] - b[1]);
   return out.slice(0, 18);
 }, FOCUS_TILE);
 
 for (const pop of pops) {
-  await page.evaluate(
-    ([t, x, y]) => window.__sunslide.popBubbleAt(t, x, y),
-    pop,
-  );
+  await page.evaluate(([t, x, y]) => window.__sunslide.popBubbleAt(t, x, y), pop);
 }
 
-for (let i = 0; i < 120; i++) {
+for (let i = 0; i < 150; i++) {
   await page.evaluate((dt) => window.__sunslide.update(dt), 1 / 60);
 }
 
@@ -131,6 +160,7 @@ const metrics = await page.evaluate(() => ({
   greened: window.__sunslide.greenedCount,
   pose: window.__sunslide.getCamPose?.(),
 }));
+
 if (metrics.greened < 8) {
   console.warn('Warning: only', metrics.greened, 'ecology cells; patches may be faint');
 }
@@ -150,12 +180,14 @@ await page.screenshot({ path: outCrop, clip: crop, animations: 'disabled' });
 console.log(
   JSON.stringify({
     label,
+    seed: CAPTURE_SEED,
     outFull,
     outCrop,
     greened: metrics.greened,
     camPose: CAM_POSE,
     focusTile: FOCUS_TILE,
     pops: pops.length,
+    layout,
   }),
 );
 

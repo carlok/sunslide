@@ -75,6 +75,7 @@ import { DOT_PRISM, isBubbleDot, prismCountForLevel } from './src/logic/bubbles.
 import { popScore } from './src/logic/scoring.js';
 import {
   slideSnapProgress,
+  slideProgressFrom,
   slideSnapDurationSeconds,
   slideLiftAtProgress,
   ghostPreviewBlend,
@@ -155,11 +156,28 @@ function applySettings(s) {
 
 window.__ssBoot = true;
 
-let composer=null, postPipelinePromise=null;
+let composer=null, postPipelinePromise=null, pendingComposer=null;
 function ensurePostPipeline(){
-  if(composer) return postPipelinePromise||Promise.resolve(composer);
-  postPipelinePromise=createPostPipeline(renderer,scene,camera).then((p)=>{ composer=p.composer; if(typeof resize==='function') resize(); return composer; });
+  // render() asks every frame until bloom is ready: keep a single load in flight.
+  if(postPipelinePromise) return postPipelinePromise;
+  postPipelinePromise=createPostPipeline(renderer,scene,camera).then(async (p)=>{
+    // Scene shaders differ when drawn into a render target (no tone mapping / linear output), so the
+    // switch to bloom used to recompile every material on the frame it happened. Compile those
+    // variants now, off the critical path; compile() is synchronous, so restore the target at once.
+    try{ await compileAllShaders(p.composer.readBuffer,true); }catch(e){ /* compile warm-up is best effort */ }
+    pendingComposer=p.composer;
+    adoptPendingComposer();
+    return p.composer;
+  }).catch((e)=>{ postPipelinePromise=null; throw e; });
   return postPipelinePromise;
+}
+// Bloom changes the look of the whole frame; switch it on outside active play (title, pause, menu,
+// game over, sector change) so it never pops in mid-run.
+function adoptPendingComposer(){
+  if(!pendingComposer) return;
+  if(state==='play'&&!paused&&!uiHold) return;
+  composer=pendingComposer; pendingComposer=null;
+  if(typeof resize==='function') resize();
 }
 function schedulePostPipelineLoad(){
   if(!useBloom||composer) return;
@@ -197,6 +215,7 @@ export function startSunslide() {
   applySettings(settingsFromStore(settingsStore));
   newLevel();
   applyQuality();
+  warmHiddenShaders();
   schedulePostPipelineLoad();
   const bestEl = document.getElementById('bestline');
   if (bestEl) bestEl.textContent = formatBestLine(loadStoredRunBest(store));
@@ -344,6 +363,9 @@ export function startSunslide() {
         canvasBuffer: [glc.width, glc.height],
         composerRT: composer ? [composer.renderTarget1.width, composer.renderTarget1.height] : null,
         postPipelineReady: !!composer,
+        postPipelinePending: !!pendingComposer,
+        viewOffsetY: camera.view && camera.view.enabled ? camera.view.offsetY : 0,
+        programs: renderer.info.programs ? renderer.info.programs.length : null,
         info: renderer.info,
       };
     },

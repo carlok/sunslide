@@ -18,6 +18,15 @@ export function slideSnapProgress(linearT, reducedMotion = false) {
   return smooth(eased);
 }
 
+/**
+ * Eased progress for a slide that starts part-way, where the hover/drag preview already moved the
+ * island (`startFrac` 0–1 toward the hole), so the tile doesn't hop back to its slot first.
+ */
+export function slideProgressFrom(startFrac, linearT, reducedMotion = false) {
+  const e0 = clamp(Number(startFrac) || 0, 0, 1);
+  return e0 + (1 - e0) * slideSnapProgress(linearT, reducedMotion);
+}
+
 export function slideLiftAtProgress(linearT, reducedMotion = false) {
   if (reducedMotion) return 0;
   return Math.sin(Math.PI * slideSnapProgress(linearT, reducedMotion));

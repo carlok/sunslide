@@ -184,7 +184,8 @@ function placeCamera(){
   const dFar=farOrbitDistance(camera.aspect);
   _pB.copy(_e2).multiplyScalar(dFar); _tB.set(0,0,0); _uB.copy(_N2);
   camera.position.lerpVectors(_pA,_pB,z); _tC.lerpVectors(_tA,_tB,z);
-  if(shakeT>0&&!REDUCED){ const a=shakeT*0.03; camera.position.x+=(Math.random()-0.5)*a; camera.position.y+=(Math.random()-0.5)*a; camera.position.z+=(Math.random()-0.5)*a; }
+  // Smooth shake (summed sines) instead of per-frame random jitter, which read as a glitch.
+  if(shakeT>0&&!REDUCED){ const a=shakeT*0.015, t=performance.now()*0.04; camera.position.x+=Math.sin(t*1.31)*a; camera.position.y+=Math.sin(t*1.73+1.1)*a; camera.position.z+=Math.sin(t*2.17+2.3)*a; }
   camera.up.lerpVectors(_uA,_uB,z).normalize(); camera.lookAt(_tC);
   camera.fov=lerp(CAMERA.fovCloseDeg,CAMERA.fovFarDeg,z); camera.updateProjectionMatrix();
 }
@@ -219,8 +220,9 @@ function render(){
     renderer.shadowMap.needsUpdate=shadowDirty||shouldUpdateShadowMap({shadowsEnabled:true,gameState:state,paused:paused||uiHold,tilesAnimating:tiles.some(t=>t.anim)});
     shadowDirty=false;
   }
+  if(useBloom&&!composer&&pendingComposer) adoptPendingComposer();
   if(useBloom&&composer) composer.render();
-  else if(useBloom&&!composer) { ensurePostPipeline(); renderer.render(scene,camera); }
+  else if(useBloom&&!composer) { ensurePostPipeline().catch(()=>{}); renderer.render(scene,camera); }
   else renderer.render(scene,camera);
   lastFrameDrawCalls=renderer.info.render.calls;
 }

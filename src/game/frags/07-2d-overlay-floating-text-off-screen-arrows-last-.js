@@ -16,6 +16,17 @@ function edgeArrow(target,color,time,label){
 const _fxA=new THREE.Vector3(), _fxB=new THREE.Vector3();
 // Screen-space radius (px) of a world-space radius around v, so overlay rings follow the zoom.
 function screenRadius(v,worldR,s){ _fxB.setFromMatrixColumn(camera.matrixWorld,0).multiplyScalar(worldR).add(v); const b=proj(_fxB); return Math.hypot(b[0]-s[0],b[1]-s[1]); }
+// Client-space position of a slot's centre, or null when it is off screen / behind the planet.
+function slotClientPos(c,r){
+  frameAt(c*TW+TW/2,r*TH+TH/2); _fxA.copy(_R); const s=onScreen(_fxA); if(!s) return null;
+  const rc=fxc.getBoundingClientRect(); return [rc.left+s[0]*rc.width/fxc.width, rc.top+s[1]*rc.height/fxc.height];
+}
+// Unit screen direction from an island to the empty meadow, for drag-to-slide.
+function holeScreenDir(id){
+  const T=tiles[id], h=findHole(); if(!T||!h) return null;
+  const a=slotClientPos(T.slot.c,T.slot.r), b=slotClientPos(h.c,h.r); if(!a||!b) return null;
+  const vx=b[0]-a[0], vy=b[1]-a[1], l=Math.hypot(vx,vy); return l>4?[vx/l,vy/l]:null;
+}
 function drawBatRoosts(time){
   // A bat that hasn't spawned yet is invisible and harmless; mark its roost with a ring in its eye colour
   // that pulses faster as it gets ready, so the pop-in is expected.

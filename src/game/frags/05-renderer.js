@@ -75,7 +75,7 @@ const skyMat=new THREE.ShaderMaterial({uniforms:{uDay:{value:0},uUp:{value:new T
     float h=dot(vD,uUp);
     vec3 zen=vec3(0.0,0.13,0.62), hor=vec3(0.16,0.42,0.9);
     vec3 day=mix(hor,zen,smoothstep(-0.1,0.75,h));
-    float sg=max(dot(vD,uSun),0.0); day+=vec3(1.0,0.85,0.6)*pow(sg,24.0)*0.6+vec3(0.9,0.75,0.6)*pow(1.0-abs(h),8.0)*0.08;
+    float sg=max(dot(vD,uSun),0.0); day+=vec3(1.0,0.85,0.6)*pow(max(sg,0.0),24.0)*0.6+vec3(0.9,0.75,0.6)*pow(max(1.0-abs(h),0.0),8.0)*0.08;
     vec3 night=mix(vec3(0.016,0.02,0.05),vec3(0.006,0.008,0.022),smoothstep(-0.1,0.8,h));
     gl_FragColor=vec4(mix(night,day,uDay),1.0);`+TAIL+`}`});
 const skyDome=new THREE.Mesh(new THREE.SphereGeometry(90,48,24),skyMat); skyDome.renderOrder=-1; skyDome.frustumCulled=false; scene.add(skyDome);
@@ -291,7 +291,8 @@ function maxTilePartGeos(T){
 function estimateTilePools(){
   let fV=0,fI=0,wV=0,wI=0,lV=0,lI=0,sV=0,sI=0;
   for(const T of tiles){
-    const c=maxTilePartGeos(T);
+    // Cached for rebuildTile, which needs the same capacities right after (32 masks per tile is costly).
+    const c=maxTilePartGeos(T); T.capCache=c;
     fV+=c.floor.v; fI+=c.floor.i; wV+=c.walls.v; wI+=c.walls.i;
     lV+=c.lamps.v; lI+=c.lamps.i; sV+=c.slab.v; sI+=c.slab.i;
   }
@@ -300,31 +301,38 @@ function estimateTilePools(){
 function resetTileBatches(){
   if(!floorBatch) return;
   scene.remove(floorBatch,wallBatch,lampBatch,slabBatch);
-  for(const b of [floorBatch,wallBatch,lampBatch,slabBatch]){
-    b.dispose(); // BatchedMesh.dispose frees the geometry and its per-instance matrices texture
-    b.customDepthMaterial?.dispose();
-    b.material.dispose();
-  }
+  // BatchedMesh.dispose frees the geometry and its per-instance matrices texture. The materials are
+  // kept (see ensureTileBatches): disposing them threw away their compiled programs every sector.
+  for(const b of [floorBatch,wallBatch,lampBatch,slabBatch]) b.dispose();
   floorAtlasTex?.dispose(); floorAtlasTex=null;
   floorBatch=wallBatch=lampBatch=slabBatch=null;
 }
+let tileMats=null;
 function ensureTileBatches(){
   if(floorBatch) return;
   const pools=estimateTilePools();
   floorAtlasTex=buildFloorAtlas();
-  const floorMat=wireBatchSphereMat(new THREE.MeshStandardMaterial({map:floorAtlasTex,roughness:0.93,emissive:'#000'}),'floor');
-  const wallMat=wireBatchSphereMat(new THREE.MeshStandardMaterial({vertexColors:true,roughness:0.82,emissive:'#000'}),'wall');
-  const lampMat=wireBatchSphereMat(new THREE.MeshStandardMaterial({color:'#fff3cf',emissive:'#ffb24a',emissiveIntensity:1,roughness:0.3}),'lamp');
-  const slabMat=wireBatchSphereMat(new THREE.MeshStandardMaterial({vertexColors:true,roughness:1,shadowSide:THREE.DoubleSide}),'slab');
-  floorBatch=new THREE.BatchedMesh(NT,pools.floor.v,pools.floor.i,floorMat);
-  wallBatch=new THREE.BatchedMesh(NT,pools.walls.v,pools.walls.i,wallMat);
-  lampBatch=new THREE.BatchedMesh(NT,pools.lamps.v,pools.lamps.i,lampMat);
-  slabBatch=new THREE.BatchedMesh(NT,pools.slab.v,pools.slab.i,slabMat);
-  // three reads customDepthMaterial from the mesh, not the material. Without the sphere-mapped depth
-  // material the shadow pass drew the raw flat tile geometry (all 15 mazes stacked near the planet's
-  // core), which threw maze-shaped streaks across the islands while real walls cast no shadow at all.
-  wallBatch.customDepthMaterial=wireBatchSphereMat(new THREE.MeshDepthMaterial({depthPacking:THREE.RGBADepthPacking}),'wall');
-  slabBatch.customDepthMaterial=wireBatchSphereMat(new THREE.MeshDepthMaterial({depthPacking:THREE.RGBADepthPacking}),'slab');
+  // The materials outlive the per-sector batches, so their programs compile once per session instead
+  // of at every sector start; only the floor atlas texture is swapped (same shader variant).
+  if(!tileMats){
+    tileMats={
+      floor:wireBatchSphereMat(new THREE.MeshStandardMaterial({map:floorAtlasTex,roughness:0.93,emissive:'#000'}),'floor'),
+      wall:wireBatchSphereMat(new THREE.MeshStandardMaterial({vertexColors:true,roughness:0.82,emissive:'#000'}),'wall'),
+      lamp:wireBatchSphereMat(new THREE.MeshStandardMaterial({color:'#fff3cf',emissive:'#ffb24a',emissiveIntensity:1,roughness:0.3}),'lamp'),
+      slab:wireBatchSphereMat(new THREE.MeshStandardMaterial({vertexColors:true,roughness:1,shadowSide:THREE.DoubleSide}),'slab'),
+      // three reads customDepthMaterial from the mesh, not the material. Without the sphere-mapped depth
+      // material the shadow pass drew the raw flat tile geometry (all 15 mazes stacked near the planet's
+      // core), which threw maze-shaped streaks across the islands while real walls cast no shadow at all.
+      wallDepth:wireBatchSphereMat(new THREE.MeshDepthMaterial({depthPacking:THREE.RGBADepthPacking}),'wall'),
+      slabDepth:wireBatchSphereMat(new THREE.MeshDepthMaterial({depthPacking:THREE.RGBADepthPacking}),'slab'),
+    };
+  } else tileMats.floor.map=floorAtlasTex;
+  floorBatch=new THREE.BatchedMesh(NT,pools.floor.v,pools.floor.i,tileMats.floor);
+  wallBatch=new THREE.BatchedMesh(NT,pools.walls.v,pools.walls.i,tileMats.wall);
+  lampBatch=new THREE.BatchedMesh(NT,pools.lamps.v,pools.lamps.i,tileMats.lamp);
+  slabBatch=new THREE.BatchedMesh(NT,pools.slab.v,pools.slab.i,tileMats.slab);
+  wallBatch.customDepthMaterial=tileMats.wallDepth;
+  slabBatch.customDepthMaterial=tileMats.slabDepth;
   for(const b of [floorBatch,wallBatch,lampBatch,slabBatch]){ b.frustumCulled=false; b.receiveShadow=true; scene.add(b); }
   floorBatch.castShadow=false; wallBatch.castShadow=slabBatch.castShadow=true; lampBatch.castShadow=false;
 }
@@ -486,7 +494,7 @@ function rebuildTile(T){
   const g=tileGeos(T,m);
   remapFloorUvs(g.floor,T.id);
   if(T.batchFloorId==null){
-    const cap=maxTilePartGeos(T);
+    const cap=T.capCache||maxTilePartGeos(T);
     T.batchFloorId=floorBatch.addGeometry(g.floor,cap.floor.v,cap.floor.i);
     T.batchWallId=wallBatch.addGeometry(g.walls,cap.walls.v,cap.walls.i);
     T.batchLampId=lampBatch.addGeometry(g.lamps,cap.lamps.v,cap.lamps.i);
@@ -596,6 +604,9 @@ const BLOOM_PER=56, BLOOM_MAX=NT*BLOOM_PER;
 const flowerHead=(()=>{ const sh=new THREE.Shape(); for(let i=0;i<=60;i++){ const t=i/60*TAU, r=0.55+0.45*Math.abs(Math.cos(2.5*t)); const x=Math.cos(t)*r, y=Math.sin(t)*r; if(i) sh.lineTo(x,y); else sh.moveTo(x,y); }
   const g=new THREE.ShapeGeometry(sh); g.rotateX(-Math.PI/2); g.translate(0,1,0); return g; })();
 const bloomHeads=inst(flowerHead,new THREE.MeshStandardMaterial({roughness:0.6,side:THREE.DoubleSide,emissive:'#331122',emissiveIntensity:0.3}),BLOOM_MAX);
+// Give it a colour buffer now: the coloured program variant then compiles at boot, not on the frame
+// the first island blooms.
+bloomHeads.setColorAt(0,new THREE.Color('#ffffff'));
 const bloomStems=inst(new THREE.CylinderGeometry(0.05,0.07,1,5).translate(0,0.5,0),new THREE.MeshStandardMaterial({color:'#3f8f3a',roughness:0.8}),BLOOM_MAX);
 const bloomCores=inst(G_BUB,new THREE.MeshStandardMaterial({color:'#ffd84a',emissive:'#ff9d2e',emissiveIntensity:0.5,roughness:0.5}),BLOOM_MAX);
 bloomHeads.castShadow=bloomStems.castShadow=true;
@@ -877,7 +888,7 @@ const cloudMat=new THREE.ShaderMaterial({uniforms:{uSun:U.sun,uClose:{value:0}},
   fragmentShader:`uniform vec3 uSun; uniform float uClose; varying vec3 vN; varying vec3 vW; void main(){
     vec3 n=normalize(vN), v=normalize(cameraPosition-vW); float sd=dot(normalize(vW),uSun);
     float day=smoothstep(-0.2,0.3,sd), lit=0.45+0.55*max(dot(n,uSun),0.0);
-    vec3 col=mix(vec3(0.07,0.09,0.18),vec3(1.0,0.97,0.93)*lit,day)+vec3(1.0,0.5,0.3)*pow(1.0-abs(sd),8.0)*0.45*day;
+    vec3 col=mix(vec3(0.07,0.09,0.18),vec3(1.0,0.97,0.93)*lit,day)+vec3(1.0,0.5,0.3)*pow(max(1.0-abs(sd),0.0),8.0)*0.45*day;
     float dist=length(cameraPosition-vW);
     float a=0.85*pow(clamp(dot(n,v),0.0,1.0),0.7)*mix(smoothstep(0.55,1.15,dist),0.4*smoothstep(0.9,1.8,dist),uClose);
     gl_FragColor=vec4(col,a);`+TAIL+`}`});
@@ -900,7 +911,7 @@ const auroraMat=new THREE.ShaderMaterial({uniforms:{uTime:U.time,uSun:U.sun},tra
   fragmentShader:`uniform float uTime; uniform vec3 uSun; varying vec2 vUv; varying vec3 vW; void main(){
     float x=vUv.x*60.0, y=vUv.y;
     float c=(0.5+0.5*sin(x+uTime*0.6+2.0*sin(x*0.37-uTime*0.25)))*(0.6+0.4*sin(x*2.3-uTime*1.1));
-    float fall=pow(1.0-y,1.6)*smoothstep(0.0,0.12,y);
+    float fall=pow(max(1.0-y,0.0),1.6)*smoothstep(0.0,0.12,y);
     float night=1.0-smoothstep(-0.35,0.05,dot(normalize(vW),uSun));
     vec3 col=mix(vec3(0.15,1.0,0.55),vec3(0.75,0.3,1.0),smoothstep(0.35,0.95,y));
     gl_FragColor=vec4(col*c*fall*night*1.3,1.0);`+TAIL+`}`});
@@ -985,7 +996,7 @@ const pillarMat=new THREE.ShaderMaterial({uniforms:{uTime:U.time},transparent:tr
       vC=vec3(1.0);
     #endif
     gl_Position=projectionMatrix*viewMatrix*modelMatrix*instanceMatrix*vec4(position,1.0); }`,
-  fragmentShader:`uniform float uTime; varying vec2 vUv; varying vec3 vC; void main(){ float a=pow(1.0-vUv.y,2.0)*(0.6+0.25*sin(uTime*4.0+vUv.y*12.0)); gl_FragColor=vec4(vC*1.6,a*0.55);`+TAIL+`}`});
+  fragmentShader:`uniform float uTime; varying vec2 vUv; varying vec3 vC; void main(){ float a=pow(max(1.0-vUv.y,0.0),2.0)*(0.6+0.25*sin(uTime*4.0+vUv.y*12.0)); gl_FragColor=vec4(vC*1.6,a*0.55);`+TAIL+`}`});
 const pillars=inst(new THREE.CylinderGeometry(1,1,1,16,1,true).translate(0,0.5,0),pillarMat,24,6);
 for(let i=0;i<24;i++) pillars.setColorAt(i,C_WHITE);
 const C_PGOLD=COL('#ffc94a'), C_PBERRY=COL('#ff4fd8'), C_PWAY=COL('#ff7fb8');
@@ -1044,6 +1055,27 @@ function mkVortex(){ const g=new THREE.Group(), m=new THREE.Mesh(new THREE.Plane
   const rocks=new THREE.InstancedMesh(new THREE.DodecahedronGeometry(1,0),new THREE.MeshStandardMaterial({color:'#6f5a48',roughness:0.95,flatShading:true}),10); rocks.castShadow=true; rocks.frustumCulled=false; g.add(rocks);
   g.visible=false; scene.add(g); return {g,m,rocks}; }
 const sinkVis=mkVortex(), exitVis=mkVortex();
+// The renderer skips hidden objects, so anything that starts hidden (frog, bats, sinkhole vortex,
+// bloom decor...) compiled its shaders on the frame it first appeared: ~40 programs at PLAY, more on
+// the first sinkhole. Compile every object once, with everything briefly made visible. Returns the
+// compileAsync promise when `async` is set (used for the bloom render-target variants).
+function compileAllShaders(target=null,async=false){
+  const flipped=[];
+  scene.traverse(o=>{ if(!o.visible){ o.visible=true; flipped.push(o); } });
+  const prev=renderer.getRenderTarget();
+  let ready=null;
+  try{
+    renderer.setRenderTarget(target);
+    if(async) ready=renderer.compileAsync(scene,camera); else renderer.compile(scene,camera);
+  }catch(e){ /* best effort */ }
+  finally{
+    renderer.setRenderTarget(prev);
+    for(const o of flipped) o.visible=false;
+  }
+  return ready||Promise.resolve();
+}
+// At boot, after quality has set the shadow config (part of every lit program).
+function warmHiddenShaders(){ compileAllShaders(null,false); }
 function poseVortex(v,t,x,y,open,crack,time,size){
   const T=tiles[t], p=tilePos(T);
   poseObject(v.g,p.x+x+0.5,p.y+y+0.5,liftOf(T)+0.0012,0); v.g.visible=true;

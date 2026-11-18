@@ -267,7 +267,9 @@ function trySlide(c,r){
   if(lightSlot(c,r)<CFG.slideLight) return 'errors.slide.tooDark';
   const T=tiles[id]; if(slideBlocked(T)) return 'errors.slide.blocked';
   let dc=h.c-c; if(dc>2) dc-=COLS; if(dc<-2) dc+=COLS;
-  T.anim={t:0,fc:c,fr:r,dc,dr:h.r-r};
+  // Start from where the hover/drag preview already moved the island, not from its slot.
+  const e0=slidePreview&&slidePreview.id===id?ghostPreviewBlend(slidePreview.pull,REDUCED):0;
+  T.anim={t:0,fc:c,fr:r,dc,dr:h.r-r,e0};
   slotGrid[h.r][h.c]=id; slotGrid[r][c]=-1; T.slot={c:h.c,r:h.r};
   runMoves++;
   SFX.slide(); refreshTiles();
@@ -298,7 +300,7 @@ function update(dt){
     else {
       if(tiles[player.t].cleared&&Math.random()<dt*0.45) SFX.buzz();
       invuln=Math.max(0,invuln-dt); comboT+=dt; boostT=Math.max(0,boostT-dt);
-      if(berry){ berry.ttl-=dt; if(berry.ttl<=0){ berry=null; berryTimer=CFG.berryEvery[0]+Math.random()*10; } }
+      if(berry){ berry.ttl-=dt; if(berry.ttl<=0){ berry=null; berryTimer=CFG.berryEvery[0]+Math.random()*(CFG.berryEvery[1]-CFG.berryEvery[0]); } }
       else if((berryTimer-=dt)<=0) spawnBerry();
       updateSink(dt); if(state!=='play') return;
       if(waypoint>=0&&(player.t===waypoint||tiles[waypoint].cleared)){ if(player.t===waypoint) SFX.tick(); waypoint=-1; }

@@ -552,6 +552,9 @@ try {
     if (layout.overflowX || layout.overflowY) fail(`${name}: page overflows the viewport`);
 
     if (large) {
+      // Bloom only switches on outside active play (so it never pops in mid-run): hold the sim
+      // like the menu does while waiting for it, then release.
+      await page.evaluate(() => window.__sunslide.setUiHold('smoke-bloom', true));
       await page.waitForFunction(
         () => {
           const m = window.__sunslide?.getRenderMetrics?.();
@@ -559,6 +562,7 @@ try {
         },
         { timeout: 20_000 },
       );
+      await page.evaluate(() => window.__sunslide.setUiHold('smoke-bloom', false));
       await page.evaluate(() => {
         const S = window.__sunslide;
         for (let i = 0; i < 150; i++) S.update(1 / 60);

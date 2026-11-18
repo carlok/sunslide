@@ -50,7 +50,7 @@ function tilePos(T){
     }
     return {x:T.slot.c*TW,y:T.slot.r*TH};
   }
-  const e=slideSnapProgress(a.t,REDUCED);
+  const e=slideProgressFrom(a.e0,a.t,REDUCED);
   return {x:(a.fc+a.dc*e)*TW, y:(a.fr+a.dr*e)*TH};
 }
 const liftOf=T=>{

@@ -33,6 +33,20 @@ function perfSample(frameMs,workMs){
 }
 // New run or quality setting change: let the scene settle before judging frames again.
 function perfRestart(){ restartAutoQuality(autoQ,performance.now()); }
+// Phone portrait: the minimap spans the bottom of the stage and hid Pip. Shift the projection so the
+// camera's aim point (Pip) sits in the middle of the area above the map.
+function applyMapViewOffset(w,h){
+  let shift=0;
+  const panel=document.getElementById('mapPanel');
+  if(panel&&!panel.classList.contains('map-hidden')&&h>w){
+    // The panel box itself can be 0 px tall; the map canvas is what covers the scene.
+    const pr=mapC.getBoundingClientRect(), sr=stageEl.getBoundingClientRect();
+    // Only when the map sits under the screen centre, where the camera aims at Pip.
+    const cx=sr.left+sr.width/2;
+    if(pr.left<cx&&pr.right>cx&&pr.height>0){ const top=pr.top-sr.top; if(top>h*0.4&&top<h) shift=Math.min(h*0.3,(h-top)/2); }
+  }
+  if(shift>1) camera.setViewOffset(w,h,0,Math.round(shift),w,h); else camera.clearViewOffset();
+}
 function resize(){
   const w=Math.max(1,stageEl.clientWidth), h=Math.max(1,stageEl.clientHeight), q=QUAL[qLevel];
   const area=w*h, budgetPr=Math.sqrt(q.px/area);
@@ -43,15 +57,21 @@ function resize(){
   pixelRatio=effectivePixelRatio(basePr,adaptiveDprState);
   renderer.setPixelRatio(pixelRatio); renderer.setSize(w,h,false);
   if(composer){ composer.setPixelRatio(pixelRatio); composer.setSize(w,h); }
-  camera.aspect=w/h; camera.updateProjectionMatrix();
+  camera.aspect=w/h; applyMapViewOffset(w,h); camera.updateProjectionMatrix();
   fxDpr=Math.min(2,deviceCap); fxc.width=Math.round(w*fxDpr); fxc.height=Math.round(h*fxDpr);
   mapDpr=Math.min(2,deviceCap); mapC.width=Math.round(mapC.clientWidth*mapDpr); mapC.height=Math.round(mapC.clientHeight*mapDpr);
   starMat.uniforms.uDpr.value=pixelRatio; renderedPaused=false;
   // Resizing clears the canvases; while paused the loop is asleep, so wake it for one redraw.
   if(paused||uiHold) wakeRenderLoop();
 }
-new ResizeObserver(()=>resize()).observe(stageEl);
-new ResizeObserver(()=>resize()).observe(mapC);
+// ResizeObserver callbacks run after this frame was drawn but before it is painted. Resizing there
+// clears the canvases and the browser paints them blank: a one-frame black/white flash on rotation,
+// fullscreen, toolbar or map toggles. Defer to the next animation frame, which resizes and redraws
+// before anything is painted.
+let resizePending=false;
+function requestResize(){ resizePending=true; wakeRenderLoop(); }
+new ResizeObserver(requestResize).observe(stageEl);
+new ResizeObserver(requestResize).observe(mapC);
 let lastT=0, clockRan=false, renderLoopActive=false, pendingClockAlign=false;
 function wakeRenderLoop(){
   if(renderLoopActive) return;
@@ -123,6 +143,7 @@ function padIdlePoll(){
   schedulePadIdlePoll();
 }
 function frame(ts){
+  if(resizePending){ resizePending=false; resize(); }
   const held=paused||uiHold;
   const plan=planRenderLoopFrame({
     documentHidden:document.hidden,

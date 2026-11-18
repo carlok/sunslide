@@ -105,6 +105,9 @@ const SFX={
   die(){ tone(520,0.9,'triangle',0.06,70); },
   clear(){ [523,659,784,1046,1318].forEach((f,i)=>tone(f,0.3,'triangle',0.05,0,i*0.08)); },
   nope(){ tone(180,0.12,'square',0.022,140); },
+  shield(){ tone(880,0.14,'sine',0.035,1320); tone(1320,0.1,'triangle',0.02,1760,0.03); },
+  batWake(){ tone(240,0.2,'triangle',0.03,430); },
+  prism(){ [84,88,91,96].forEach((m,i)=>tone(MIDI(m),0.16,'sine',0.04,0,i*0.045)); },
   life(){ [784,988,1175,1568].forEach((f,i)=>tone(f,0.2,'sine',0.05,0,i*0.07)); },
   start(){ tone(392,0.3,'triangle',0.05,784); }
 };

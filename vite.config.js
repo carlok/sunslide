@@ -68,7 +68,11 @@ import {
   PALETTE_COLOR_BLIND,
   PALETTE_STANDARD,
   highlightTheme,
+  BUBBLE_COLORS,
+  FLOOR_SPECKS,
 } from './src/logic/visual-theme.js';
+import { DOT_PRISM, isBubbleDot, prismCountForLevel } from './src/logic/bubbles.js';
+import { popScore } from './src/logic/scoring.js';
 import {
   slideSnapProgress,
   slideSnapDurationSeconds,
@@ -110,6 +114,7 @@ import {
   restartAutoQuality,
   tickAutoQuality,
 } from './src/logic/auto-quality.js';
+import { isCaught } from './src/logic/catch.js';
 import { t as tr } from './src/i18n/index.js';
 
 const settingsStore = createStore();
@@ -117,13 +122,19 @@ const haptics = createHaptics();
 let mapEligLitPrefix = 'rgba(255,210,94,';
 let mapEligDarkStroke = 'rgba(127,140,255,0.85)';
 
+let paletteIsColorBlind = false;
 function applyColorBlindPalette(cb) {
   const src = cb ? PALETTE_COLOR_BLIND : PALETTE_STANDARD;
+  const changed = !!cb !== paletteIsColorBlind;
+  paletteIsColorBlind = !!cb;
   for (let i = 0; i < NT; i++) PALETTE[i] = src[i];
   applyRendererTheme(cb);
   const t = highlightTheme(!!cb);
   mapEligLitPrefix = t.mapEligLit;
   mapEligDarkStroke = cb ? 'rgba(94,176,255,0.9)' : 'rgba(127,140,255,0.85)';
+  // Floors, cliff lips and moss caps are baked from PALETTE / the theme; repaint them now
+  // rather than at the next sector.
+  if (changed && tiles?.length) repaintTilesForPalette();
   if (tiles?.length) refreshTiles();
 }
 
@@ -276,8 +287,12 @@ export function startSunslide() {
     get bats() { return bats; },
     get player() { return player; },
     get dotsLeft() { return dotsLeft; },
+    get inv() { return invuln; },
     set inv(v) { invuln = v; },
     set lives(v) { lives = v; },
+    get fright() { return fright; },
+    set fright(v) { fright = v; },
+    batVisible(i) { return !!(batObjs[i] && batObjs[i].root.visible); },
     killNow() { if (state === 'play') { invuln = 0; die(); } },
     clearIsland(id) {
       const T = tiles[id];
@@ -312,7 +327,7 @@ export function startSunslide() {
       const T = tiles[t];
       if (!T) return ecologyCount(ecologyState);
       const i = y * TW + x;
-      if (T.dots[i] === 1) eatAt(t, x, y);
+      if (isBubbleDot(T.dots[i])) eatAt(t, x, y);
       return ecologyCount(ecologyState);
     },
     getRenderMetrics() {

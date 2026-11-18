@@ -263,6 +263,13 @@ function buildFloorAtlas(){
   }
   return canvasTex(c);
 }
+// Palette change mid-sector (colour-blind toggle): repaint the floor atlas and the cliff-lip vertex
+// colours now instead of at the next sector.
+function repaintTilesForPalette(){
+  if(!floorBatch) return;
+  const old=floorAtlasTex; floorAtlasTex=buildFloorAtlas(); floorBatch.material.map=floorAtlasTex; old?.dispose();
+  for(const T of tiles){ T.geoKey=''; rebuildTile(T); }
+}
 function remapFloorUvs(geo,tileId){
   const {cols,rows}=atlasGridForCount(NT);
   const rect=atlasRectForTile(tileId,cols,rows), uv=geo.attributes.uv;
@@ -374,6 +381,8 @@ const WALL_T=0.0125, WALL_H=0.034, POST_R=0.0165, POST_H=0.046, LAMP_R=0.0085;
 const kx=gy=>1/(CW*Math.max(0.25,Math.cos(gy2lat(gy)))), ky=1/CH;
 const PROF=[[-1,0,-1,0],[-1,0.72,-1,0.1],[-0.86,0.95,-0.6,0.8],[-0.55,1.0,-0.15,1],[0.55,1.0,0.15,1],[0.86,0.95,0.6,0.8],[1,0.72,1,0.1],[1,0,1,0]];
 const COL=h=>new THREE.Color(h);
+// GLSL vec3 literal (linear working space) from an sRGB hex colour.
+const hexVec3=h=>{ const c=new THREE.Color(h); return `${c.r.toFixed(4)},${c.g.toFixed(4)},${c.b.toFixed(4)}`; };
 const C_STONE=COL('#cbc2ae'), C_CAP=COL('#ece5d3'), C_BASE=COL('#7f7766'), C_MOSS=COL('#86b35a'), C_POST=COL('#b3a993'), C_SOIL=COL('#7a5232'), C_ROCK=COL('#3a312c');
 const C_WHITE=COL('#ffffff'), C_BLACK=COL('#000000'), C_GOLDWALL=COL('#ffd477'), C_GOLDE=COL('#7a4a00'), C_LAMP=COL('#ffb24a'), C_LAMPHOME=COL('#ffd25e'), C_HI=COL('#ffcc55'), C_HIDARK=COL('#4a5cff'), C_BLOOM=COL('#ff9ccf');
 function applyRendererTheme(cb){
@@ -456,8 +465,8 @@ function floorTexture(T){
   g.fillStyle=PALETTE[T.id]; g.fillRect(0,0,W,H);
   for(let y=0;y<TH;y++) for(let x=0;x<TW;x++){ g.fillStyle=((x+y)&1)?'rgba(255,255,230,0.07)':'rgba(0,30,0,0.07)'; g.fillRect(x*64,y*64,64,64); }
   for(let i=0;i<6500;i++){ g.fillStyle=Math.random()<0.5?'rgba(255,255,220,.13)':'rgba(0,25,0,.16)'; g.fillRect(Math.random()*W,Math.random()*H,1.2,2+Math.random()*4); }
-  const fc=['#ffffff','#fff06a','#ffd0e6'];
-  g.globalAlpha=0.8; for(let i=0;i<90;i++){ g.fillStyle=fc[ri(3)]; g.beginPath(); g.arc(Math.random()*W,Math.random()*H,1.3+Math.random()*1.3,0,TAU); g.fill(); } g.globalAlpha=1;
+  const fc=FLOOR_SPECKS; // no yellow specks: they looked like bubble seeds
+  g.globalAlpha=0.8; for(let i=0;i<90;i++){ g.fillStyle=fc[ri(fc.length)]; g.beginPath(); g.arc(Math.random()*W,Math.random()*H,1.3+Math.random()*1.3,0,TAU); g.fill(); } g.globalAlpha=1;
   g.font='900 200px system-ui,-apple-system,sans-serif'; g.textAlign='center'; g.textBaseline='middle';
   g.fillStyle='rgba(255,255,235,0.22)'; g.fillText(String(T.num),W/2,H/2+14);
   g.lineWidth=5; g.strokeStyle='rgba(0,30,0,0.12)'; g.strokeText(String(T.num),W/2,H/2+14);
@@ -511,12 +520,20 @@ const bubbleMat=new THREE.ShaderMaterial({uniforms:{uTime:U.time,uSun:U.sun},tra
       vec3 ir=0.5+0.5*cos(6.2832*(f*1.3+vec3(0.0,0.33,0.67)+uTime*0.06+vW.y*3.0));
       float day=smoothstep(-0.15,0.35,dot(normalize(vW),uSun));
       vec3 col=mix(vec3(0.75,0.9,1.0),ir,0.7)*(0.2+1.3*f)*(0.4+0.9*day);
+      // Daylight: ink the outer rim so the bubble outline reads on pale floors; night keeps the glow.
+      float ink=smoothstep(0.3,0.8,f)*day*0.8;
+      col=mix(col,vec3(${hexVec3(BUBBLE_COLORS.rimInk)}),ink);
       float sp=pow(max(dot(reflect(-uSun,n),v),0.0),70.0)*2.2*day;
-      gl_FragColor=vec4(col+vec3(sp),clamp(0.12+0.75*f+sp*0.2,0.0,0.95));`+TAIL+`}`});
+      gl_FragColor=vec4(col+vec3(sp),clamp(0.12+0.75*f+ink*0.3+sp*0.2,0.0,0.95));`+TAIL+`}`});
 const G_BUB=new THREE.SphereGeometry(1,22,16);
 function inst(geo,mat,n,order=0){ const m=new THREE.InstancedMesh(geo,mat,n); m.instanceMatrix.setUsage(THREE.DynamicDrawUsage); m.frustumCulled=false; m.count=0; m.renderOrder=order; scene.add(m); return m; }
 const bubbles=inst(G_BUB,bubbleMat,BUB_MAX,3);
-const seeds=inst(new THREE.IcosahedronGeometry(1,1),new THREE.MeshStandardMaterial({color:'#ffd36b',emissive:'#ff9a28',emissiveIntensity:0.7,roughness:0.35,metalness:0.1}),BUB_MAX);
+const seeds=inst(new THREE.IcosahedronGeometry(1,1),new THREE.MeshStandardMaterial({color:BUBBLE_COLORS.seed,emissive:BUBBLE_COLORS.seedEmissive,emissiveIntensity:0.55,roughness:0.35,metalness:0.1}),BUB_MAX);
+// Prism bubbles: an unlit faceted core whose hue cycles (per-instance colour, set once here so the
+// coloured program variant compiles at boot rather than on the first prism frame).
+const PRISM_MAX=16;
+const prismSeeds=inst(new THREE.IcosahedronGeometry(1,0),new THREE.MeshBasicMaterial({color:'#ffffff',toneMapped:false}),PRISM_MAX);
+prismSeeds.setColorAt(0,new THREE.Color('#ffffff'));
 const bigBubbles=inst(G_BUB,bubbleMat,16,3);
 const gems=inst(new THREE.OctahedronGeometry(1,0),new THREE.MeshStandardMaterial({color:'#ffe38a',emissive:'#ffb020',emissiveIntensity:2.6,roughness:0.15,metalness:0.3,flatShading:true}),16);
 
@@ -704,7 +721,7 @@ const pMat=new THREE.ShaderMaterial({uniforms:{uPx:{value:400}},transparent:true
 const points=new THREE.Points(pGeo,pMat); points.frustumCulled=false; points.renderOrder=5; scene.add(points);
 let pNext=0;
 const PCOL=(h,m)=>COL(h).multiplyScalar(m);
-const PC={bubble:[PCOL('#e8f6ff',1.6),PCOL('#ffd0f0',1.4),PCOL('#b8f3ff',1.6)],gold:[PCOL('#ffd36b',3),PCOL('#fff2b0',3)],
+const PC={bubble:[PCOL('#e8f6ff',1.6),PCOL('#ffd0f0',1.4),PCOL('#b8f3ff',1.6)],prism:[PCOL('#ff5fd0',1.8),PCOL('#5fd8ff',1.8),PCOL('#fff06a',1.8),PCOL('#8dff6a',1.8),PCOL('#b48cff',1.8)],gold:[PCOL('#ffd36b',3),PCOL('#fff2b0',3)],
   bat:[PCOL('#b394ff',1.3),PCOL('#6f58b8',1)],dust:[PCOL('#c9a77a',0.5),PCOL('#8f7556',0.45)],teal:[PCOL('#5fe6ff',1.8),PCOL('#ffffff',1.2)],warp:[PCOL('#b07bff',2.0),PCOL('#5fe6ff',1.8),PCOL('#ffffff',1.4)],berry:[PCOL('#ff4fd8',2.2),PCOL('#ffd0f4',1.8),PCOL('#9f6bff',1.8)],petal:[PCOL('#ff8fbf',1.6),PCOL('#fff6e6',1.4),PCOL('#ffd84a',1.6),PCOL('#c9a8ff',1.5)]};
 function emit(pos,n,cols,speed,size,life,grav=0.5,up=0.5){
   _e1.copy(pos).normalize();

@@ -27,10 +27,18 @@ function newLevel(){
   for(const g of bats) tiles[g.home].dots[1*TW+3]=0;
   const pool=tiles.filter(T=>T.id!==startTile);
   for(let i=0;i<CFG.sunstones;i++){ const T=pool.splice(ri(pool.length),1)[0]; T.dots[ri(N)]=2; }
+  // Rare prism bubbles: at most one per island, on the islands farthest from the start.
+  const far=tiles.filter(T=>T.id!==startTile).map(T=>({T,d:slotDist(T.slot,startSlot)+Math.random()*1.5})).sort((a,b)=>b.d-a.d);
+  let prisms=prismCountForLevel(level);
+  for(const {T} of far){
+    if(prisms<=0) break;
+    const cells=[]; for(let i=0;i<N;i++) if(T.dots[i]===1) cells.push(i);
+    if(cells.length){ T.dots[cells[ri(cells.length)]]=DOT_PRISM; prisms--; }
+  }
   dotsLeft=0; initialGreenTarget=0;
   let bubbleDots=0;
   for(const T of tiles) for(let i=0;i<N;i++){
-    if(T.dots[i]===1){ initialGreenTarget++; bubbleDots++; }
+    if(isBubbleDot(T.dots[i])){ initialGreenTarget++; bubbleDots++; }
     if(T.dots[i]) dotsLeft++;
   }
   sectorPar=computeParMoves(level,tiles,bubbleDots);
@@ -46,9 +54,12 @@ function newLevel(){
 }
 function resetActors(){
   player=mkActor(startTile,3,2); frog.yaw=Math.PI;
-  bats.forEach((g,i)=>{ g.a=mkActor(g.home,3,1); g.mode='wait'; g.timer=1.4+i*0.9; g.dir=-1; });
+  // A bat whose island bloomed has flown away for good; a death must not bring it back.
+  bats.forEach((g,i)=>{ if(g.mode==='gone') return; g.a=mkActor(g.home,3,1); g.mode='wait'; g.timer=1.4+i*0.9; g.dir=-1; g.bumpT=0; });
   want=-1; fright=0; chain=0;
 }
+// Bats still waiting to spawn stay out until Pip's shield is down, so a live bat can always catch.
+function holdBatsForShield(){ for(const g of bats) if(g.mode==='wait') g.timer=Math.max(g.timer,invuln+0.3); }
 function addScore(n){
   score+=n;
   if(score>=nextLife){ nextLife+=CFG.lifeEvery; lives++; SFX.life(); say(tr('toast.extraLife'),1200); }
@@ -59,13 +70,18 @@ function eatAt(t,x,y){
   const T=tiles[t], i=y*TW+x, v=T.dots[i]; if(!v) return;
   T.dots[i]=0; dotsLeft--; T.left--;
   const mult=isHome(T)?2:1, pos=cellWorld(t,x,y,0.035);
-  if(v===1){
+  if(isBubbleDot(v)){
     markBubbleCollected(ecologyState,t,x,y,gameClock);
     if(typeof syncAmbientGreen==='function') syncAmbientGreen();
     maybeCelebratePlanetGreen();
     combo=comboT<CFG.comboWin?combo+1:1; comboT=0;
     haptics.bubbleCollect();
-    addScore((10+Math.min(20,(combo-1)*2))*mult); SFX.pop(combo-1); emit(pos,10,PC.bubble,0.2,0.007,0.45,0.25);
+    const pts=popScore(v,combo,mult>1); addScore(pts); SFX.pop(combo-1);
+    if(v===DOT_PRISM){
+      SFX.prism(); emit(pos,26,PC.prism,0.26,0.009,0.8,0.2);
+      floatAt(pos,'+'+pts,`hsl(${Math.round(gameClock*140)%360},95%,72%)`);
+      if(!prismToastShown){ prismToastShown=true; say(tr('toast.prism',{points:pts}),1500); }
+    } else emit(pos,10,PC.bubble,0.2,0.007,0.45,0.25);
     if(combo>=5&&combo%5===0){ floatAt(pos,'combo ×'+combo,'#7fe8ff'); if(combo%20===0) say(tr('toast.combo',{combo}),900); }
   }
   else {
@@ -183,22 +199,38 @@ function updateBats(dt){
   for(const g of bats){
     if(g.mode==='wait'){
       g.timer-=dt;
-      if(g.timer<=0){ const w=actorWorld(g.a), dx=wrapD(w[0]-pw[0]), dy=w[1]-pw[1]; if(dx*dx+dy*dy<2.5) g.timer=0.5; else g.mode='live'; }
+      if(g.timer<=0){
+        const w=actorWorld(g.a), dx=wrapD(w[0]-pw[0]), dy=w[1]-pw[1];
+        if(dx*dx+dy*dy<2.5) g.timer=0.5;
+        else { g.mode='live'; g.bumpT=0; const pos=actorPos(g.a,0.05); emit(pos,16,PC.bat,0.12,0.011,0.7,-0.02); SFX.batWake(); }
+      }
       continue;
     }
+    if(g.bumpT>0) g.bumpT-=dt;
     if(g.mode==='dead'){ g.timer-=dt; if(g.timer<=0){ if(tiles[g.home].cleared){ g.mode='gone'; g.goneT=9; } else { g.a=mkActor(g.home,3,1); g.mode='wait'; g.timer=1.2; g.dir=-1; } } continue; }
     if(g.mode==='gone'){ g.goneT+=dt; continue; }
     if(g.asleep&&!g.a.moving) continue;
     stepActor(g.a,dt,batSpeed(g),()=>g.asleep?-1:batChoose(g),null);
   }
 }
+// Turn a bat back the way it came (same swap Pip uses to reverse mid-step).
+function bumpBat(g){
+  const a=g.a;
+  if(a.moving){ const t=a.t,x=a.x,y=a.y; a.t=a.nt;a.x=a.nx;a.y=a.ny;a.nt=t;a.nx=x;a.ny=y; a.prog=1-a.prog; }
+  if(a.dir>=0){ a.dir=(a.dir+2)&3; g.dir=a.dir; }
+  g.bumpT=0.6;
+}
 function collide(){
-  if(invuln>0) return;
-  const pw=actorWorld(player);
+  const pw=actorWorld(player), plon=gx2lon(pw[0]), plat=gy2lat(pw[1]);
   for(const g of bats){
     if(g.mode!=='live'||g.asleep) continue;
-    const w=actorWorld(g.a), dx=wrapD(w[0]-pw[0]), dy=w[1]-pw[1];
-    if(dx*dx+dy*dy<0.36){
+    const w=actorWorld(g.a);
+    if(isCaught(plon,plat,gx2lon(w[0]),gy2lat(w[1]))){
+      if(invuln>0){
+        // Shielded Pip: the bat bounces off instead of sliding through.
+        if(fright<=0&&!(g.bumpT>0)){ bumpBat(g); shieldFlash=0.35; SFX.shield(); }
+        continue;
+      }
       if(fright>0){
         chain++; const pts=100*(1<<chain); addScore(pts); g.mode='dead'; g.timer=4; SFX.batEat();
         const pos=actorPos(g.a,0.05); emit(pos,28,PC.bat,0.17,0.013,0.9,-0.04); floatAt(pos,'+'+pts,'#d4c2ff');
@@ -278,13 +310,13 @@ function update(dt){
     updateWarp(dt); if(sink) updateSink(dt);
   } else if(state==='dying'){
     dyingT-=dt;
-    if(dyingT<=0){ lives--; if(lives<=0) gameOver(); else { resetActors(); state='play'; readyT=1.0; invuln=2.5; say(tr('toast.ready'),900); } }
+    if(dyingT<=0){ lives--; if(lives<=0) gameOver(); else { resetActors(); state='play'; readyT=1.0; invuln=2.5; holdBatsForShield(); say(tr('toast.ready'),900); } }
   } else if(state==='clear'){
     clearT-=dt;
     if(Math.random()<dt*7){ const d=new THREE.Vector3(Math.random()*2-1,Math.random()*2-1,Math.random()*2-1).normalize().multiplyScalar(1.12); emit(d,30,[PC.gold[0],PC.teal[0],PC.bubble[1]],0.3,0.013,1.1,0.05); }
     if(clearT<=0){
       if(typeof window.__ssHideClearStars==='function') window.__ssHideClearStars();
-      level++; newLevel(); state='play'; readyT=1.6; invuln=2; zoomT=1; say(tr('toast.sector',{level}),1300);
+      level++; newLevel(); state='play'; readyT=1.6; invuln=2; holdBatsForShield(); zoomT=1; say(tr('toast.sector',{level}),1300);
     }
   }
   updateCameraTarget(dt);
@@ -334,7 +366,7 @@ function startGame(){
   score=0; lives=3; level=1; nextLife=CFG.lifeEvery; runMoves=0; runTimeMs=0; deaths=0; newLevel();
   if(typeof window.__ssHideClearStars==='function') window.__ssHideClearStars();
   if(typeof window.__ssRefreshTitleStars==='function') window.__ssRefreshTitleStars();
-  state='play'; readyT=1.6; invuln=2; zoomT=1; perfRestart();
+  state='play'; readyT=1.6; invuln=2; holdBatsForShield(); zoomT=1; perfRestart();
   if(typeof refreshShadowMap==='function') refreshShadowMap();
   $('ov').classList.add('hide'); $('wBlock').classList.add('hide'); say(tr('toast.ready'),1200); SFX.start();
   if(typeof syncAmbientGreen==='function') syncAmbientGreen();

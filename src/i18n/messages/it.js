@@ -92,7 +92,7 @@ export default {
   'title.b3':
     'Tocca un’altra isola sulla mappa per una tappa. La mappa mostra tutte le bolle rimaste.',
   'title.b4':
-    'Ogni pipistrello custodisce la sua isola: veloce al buio, assonnato di giorno.',
+    'Ogni pipistrello custodisce la sua isola: veloce al buio, più lento di giorno.',
   'title.b5':
     'Porta un’isola alla casa (1–15 in ordine di lettura): il pipistrello dorme e le bolle valgono doppio.',
   'title.b6':
@@ -101,6 +101,7 @@ export default {
     'Attenzione alle crepe: un sinkhole ti catapulta sull’altro lato del pianeta.',
   'title.b8':
     'Le bacche del cielo danno sprint. Le pietre solari fanno inseguire i pipistrelli.',
+  'title.b9': 'Le rare bolle prisma arcobaleno valgono come cinque bolle normali.',
 
   'title.play': 'GIOCA',
   'title.rules': 'Come si gioca',
@@ -180,6 +181,7 @@ export default {
   'toast.extraLife': 'Vita extra!',
   'toast.combo': 'Combo ×{combo}!',
   'toast.sunstone': 'Pietra solare! Insegui i pipistrelli',
+  'toast.prism': 'Bolla prisma! +{points}',
   'toast.islandCleared': 'Isola {num} svuotata! Fiorisce{bat}',
   'toast.islandClearedBat': ' e il pipistrello vola via',
   'toast.berryIsland': 'Una bacca del cielo su l’isola {num}!',

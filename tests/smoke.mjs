@@ -382,6 +382,80 @@ try {
       await page.waitForTimeout(400);
     }
 
+    if (name === 'desktop') {
+      // Bat rules: a visible awake bat can always catch; waiting bats are hidden and harmless;
+      // a shielded Pip bounces bats; bloomed islands' bats stay gone; sleep follows home, not sun.
+      const batRules = await page.evaluate(() => {
+        const S = window.__sunslide;
+        const out = {};
+        const fresh = () => { S.beginDeterministicRun(); S.inv = 0; S.fright = 0; S.want = -1; };
+        const putPipOn = (a) => Object.assign(S.player, { t: a.t, x: a.x, y: a.y, moving: false, dir: -1, prog: 0 });
+        const awakeBat = () => S.bats.find((b) => !S.isHome(S.tiles[b.home]));
+
+        fresh();
+        const w = S.bats[0];
+        w.mode = 'wait'; w.timer = 99;
+        putPipOn(w.a);
+        S.update(0.016);
+        S.drawCaptureFrame();
+        out.waitHidden = !S.batVisible(0);
+        out.waitHarmless = S.state === 'play';
+
+        fresh();
+        let g = awakeBat();
+        if (g) {
+          g.mode = 'live';
+          putPipOn(g.a);
+          S.update(0.016);
+          out.liveCatches = S.state === 'dying';
+        } else out.liveCatches = 'skipped';
+
+        fresh();
+        g = awakeBat();
+        if (g) {
+          S.inv = 5;
+          g.mode = 'live'; g.bumpT = 0;
+          putPipOn(g.a);
+          S.update(0.016);
+          out.shieldBumps = S.state === 'play' && g.bumpT > 0;
+        } else out.shieldBumps = 'skipped';
+
+        fresh();
+        g = S.bats[0];
+        S.clearIsland(g.home);
+        S.killNow();
+        for (let i = 0; i < 40 && S.state !== 'play'; i++) S.update(0.1);
+        out.goneStaysGone = S.state === 'play' && g.mode === 'gone';
+
+        fresh();
+        let sleepOk = true;
+        for (const lon of [0, 1.6, 3.2, 4.8]) {
+          S.sunLon = lon;
+          S.update(0.016);
+          for (const b of S.bats) if (b.asleep !== S.isHome(S.tiles[b.home])) sleepOk = false;
+        }
+        out.sleepFollowsHome = sleepOk;
+
+        // Prism bubbles: two in sector 1, counted as bubbles, and popping one greens a cell.
+        fresh();
+        const prisms = [];
+        for (const T of S.tiles) for (let i = 0; i < 32; i++) if (T.dots[i] === 3) prisms.push({ t: T.id, x: i % 8, y: (i / 8) | 0 });
+        out.prismCount = prisms.length === 2;
+        if (prisms.length) {
+          const before = S.dotsLeft;
+          const greenBefore = S.greenedCount;
+          S.popBubbleAt(prisms[0].t, prisms[0].x, prisms[0].y);
+          out.prismPops = S.dotsLeft === before - 1 && S.greenedCount > greenBefore;
+        }
+
+        S.beginDeterministicRun();
+        return out;
+      });
+      const badBat = Object.entries(batRules).filter(([, v]) => v === false);
+      if (badBat.length) fail(`${name}: bat rules ${JSON.stringify(batRules)}`);
+      else console.log(name, 'bat rules', batRules);
+    }
+
     const simTicks = large ? Math.min(SIM_TICKS, 2800) : SIM_TICKS;
     const res = await page.evaluate(
       ({ ticks }) => {

@@ -91,7 +91,7 @@ export default {
   'title.b3':
     'Tap any other island on the map to set a waypoint. The map shows every bubble left.',
   'title.b4':
-    'Each bat guards its own island: quick in the dark, drowsy in daylight.',
+    'Each bat guards its own island: quick in the dark, slower in daylight.',
   'title.b5':
     'Slide an island to its home slot (1–15 in reading order): its bat sleeps and its bubbles score double.',
   'title.b6':
@@ -99,6 +99,7 @@ export default {
   'title.b7':
     'Watch for cracks: a sinkhole drops you straight through to the other side of the planet.',
   'title.b8': 'Sky berries give a speed burst. Sunstones let you chase the bats.',
+  'title.b9': 'Rare rainbow prism bubbles are worth five ordinary ones.',
   'title.play': 'PLAY',
   'title.rules': 'How to play',
   'title.menuFoot': '☰ Menu for credits and full control reference · gamepads supported',
@@ -177,6 +178,7 @@ export default {
   'toast.extraLife': 'Extra life!',
   'toast.combo': 'Combo ×{combo}!',
   'toast.sunstone': 'Sunstone! Chase the bats',
+  'toast.prism': 'Prism bubble! +{points}',
   'toast.islandCleared': 'Island {num} cleared! It blooms{bat}',
   'toast.islandClearedBat': ' and its bat flies off',
   'toast.berryIsland': 'A sky berry ripened on island {num}!',

@@ -6,7 +6,7 @@ let sunLon=0, gameClock=0;
 let ecologyCaptureHold=false, ecologyCaptureSkyDay=1;
 let sink=null, sinkTimer=14, warpT=0, warpDest=null, warped=false, exitFx=null;
 let combo=0, comboT=9, berry=null, berryTimer=25, boostT=0, waypoint=-1, shakeT=0, deaths=0;
-let want=-1, cooldown=0, readyT=0, invuln=0, fright=0, chain=0, dyingT=0, clearT=0;
+let want=-1, cooldown=0, readyT=0, invuln=0, fright=0, chain=0, dyingT=0, clearT=0, shieldFlash=0, prismToastShown=false;
 let aligned=false, startTile=0;
 let player=null, bats=[];
 let viewFar=store.get('viewFar',false), zoomT=1, zoomTarget=1, camLat=0.3, camLon=0;
@@ -50,7 +50,7 @@ function tilePos(T){
     }
     return {x:T.slot.c*TW,y:T.slot.r*TH};
   }
-  const e=slideSnapProgress(a.t,REDUCED);
+  const e=slideProgressFrom(a.e0,a.t,REDUCED);
   return {x:(a.fc+a.dc*e)*TW, y:(a.fr+a.dr*e)*TH};
 }
 const liftOf=T=>{

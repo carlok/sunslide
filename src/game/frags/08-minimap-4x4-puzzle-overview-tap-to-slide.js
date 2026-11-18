@@ -13,6 +13,7 @@ function drawMap(time){
   for(const T of tiles){ const p=tilePos(T); for(const off of (T.anim?[0,-COLS,COLS]:[0])){ const sx=p.x/TW+off; if(sx<-1||sx>COLS) continue; mapIsland(T,sx,p.y/TH,elig.includes(T.id),time); } }
   const dot=(w,r,fill,stroke)=>{ for(const off of [0,-GW,GW]){ const x=pad+(w[0]+off)/TW*cw, y=top+w[1]/TH*ch; g.beginPath(); g.arc(x,y,r,0,TAU); g.fillStyle=fill; g.fill(); if(stroke){ g.lineWidth=1.5*k; g.strokeStyle=stroke; g.stroke(); } } };
   for(const b of bats){ if(b.mode==='dead'||b.mode==='gone') continue; const w=actorWorld(b.a);
+    if(b.mode==='wait'){ g.save(); g.globalAlpha=0.45; dot(w,2.6*k,'rgba(20,10,40,0.35)',BATCOL[b.type]); g.restore(); continue; }
     dot(w,3.2*k,fright>0&&!b.asleep?'#9fb2ff':'#2a1f46',BATCOL[b.type]);
     if(b.asleep){ g.fillStyle='#dfe6ff'; g.font=`800 ${8*k}px system-ui`; g.fillText('z',pad+w[0]/TW*cw+5*k,top+w[1]/TH*ch-5*k); } }
   if(sink){ const T=tiles[sink.t], p=tilePos(T); dot([mod(p.x+sink.x+0.5,GW),p.y+sink.y+0.5],2.8*k,'#1a0830','#b07bff'); }
@@ -31,7 +32,9 @@ function mapIsland(T,sx,sy,elig,time){
   for(let s=0;s<8;s++){ const L=lightAt(p.x+s+0.5,p.y+TH/2); g.fillStyle=`rgba(6,8,30,${((1-L)*0.55).toFixed(3)})`; g.fillRect(x+w*s/8-0.5,y,w/8+1,h); }
   const cx=w/TW, cy=h/TH;
   for(let i=0;i<N;i++){ const v=T.dots[i]; if(!v) continue;
-    g.fillStyle=v===2?'#ffd25e':'rgba(255,255,255,0.95)'; g.beginPath(); g.arc(x+((i%TW)+0.5)*cx,y+(((i/TW)|0)+0.5)*cy,(v===2?1.9:1.05)*k,0,TAU); g.fill(); }
+    const prism=v===DOT_PRISM;
+    g.fillStyle=v===2?'#ffd25e':prism?`hsl(${Math.round(time*126+i*47)%360},100%,66%)`:'rgba(255,255,255,0.95)';
+    g.beginPath(); g.arc(x+((i%TW)+0.5)*cx,y+(((i/TW)|0)+0.5)*cy,(v===2?1.9:prism?1.7:1.05)*k,0,TAU); g.fill(); }
   g.restore();
   const home=isHome(T);
   g.lineWidth=(home?2.2:1)*k; g.strokeStyle=home?'#ffd25e':'rgba(255,255,255,0.28)'; rrect(g,x,y,w,h,4*k); g.stroke();

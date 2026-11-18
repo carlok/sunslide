@@ -1,6 +1,7 @@
 /** Planet greening progress — bubble cells turned permanent ecology. */
+import { isBubbleDot } from './bubbles.js';
 
-/** Count initial bubble dots (`=== 1`) on all tiles (optional for tests / tooling). */
+/** Count initial bubble dots (plain and prism) on all tiles (optional for tests / tooling). */
 export function countBubbleDotsOnTiles(tiles, tw, nCells) {
   let count = 0;
   if (!tiles?.length) return 0;
@@ -8,7 +9,7 @@ export function countBubbleDotsOnTiles(tiles, tw, nCells) {
     const dots = T.dots;
     if (!dots) continue;
     for (let i = 0; i < nCells; i++) {
-      if (dots[i] === 1) count += 1;
+      if (isBubbleDot(dots[i])) count += 1;
     }
   }
   return count;

@@ -94,7 +94,7 @@ export default {
   'title.b3':
     '지도에서 다른 섬을 탭하면 경유지를 설정합니다. 지도에는 남은 모든 거품이 표시됩니다.',
   'title.b4':
-    '각 박쥐는 자기 섬을 지킵니다: 어두울 땐 빠르고, 낮엔 졸려요.',
+    '각 박쥐는 자기 섬을 지킵니다: 어두울 땐 빠르고, 낮엔 느려요.',
   'title.b5':
     '섬을 집 칸(읽는 순서대로 1–15)으로 밀면 그 박쥐는 잠들고, 그 섬의 거품은 점수가 두 배가 됩니다.',
   'title.b6':
@@ -103,6 +103,7 @@ export default {
     '균열을 조심하세요. 싱크홀에 빠지면 행성 반대편으로 곧장 떨어집니다.',
   'title.b8':
     '하늘 베리는 속도 부스트를, 태양석은 박쥐를 쫓을 수 있게 해줍니다.',
+  'title.b9': '드문 무지개 프리즘 방울은 일반 방울 다섯 개의 가치가 있어요.',
   'title.play': '플레이',
   'title.rules': '게임 방법',
   'title.menuFoot': '☰ 메뉴: 크레딧과 전체 조작법 · 게임패드 지원',
@@ -181,6 +182,7 @@ export default {
   'toast.extraLife': '추가 목숨!',
   'toast.combo': '콤보 ×{combo}!',
   'toast.sunstone': '태양석! 박쥐를 쫓아가세요',
+  'toast.prism': '프리즘 방울! +{points}',
   'toast.islandCleared': '섬 {num} 클리어! 꽃이 핍니다{bat}',
   'toast.islandClearedBat': ' — 박쥐도 날아갑니다',
   'toast.berryIsland': '섬 {num}에 하늘 베리가 익었어요!',

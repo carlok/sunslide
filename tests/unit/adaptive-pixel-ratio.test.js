@@ -59,4 +59,48 @@ describe('adaptive-pixel-ratio', () => {
     expect(s.cap).toBe(1.25);
     expect(s.current).toBe(1.25);
   });
+
+  describe('with a display cadence', () => {
+    const HZ30 = 1000 / 30;
+
+    it('keeps full DPR on a 30 Hz-capped display', () => {
+      const s = createAdaptiveDprState({ deviceDpr: 2 });
+      let changed = false;
+      for (let i = 0; i < 600; i++) changed = tickAdaptiveDpr(s, HZ30, HZ30) || changed;
+      expect(changed).toBe(false);
+      expect(s.current).toBe(2);
+    });
+
+    it('still steps down when frames fall behind the cadence', () => {
+      const s = createAdaptiveDprState({ deviceDpr: 2, lowHoldMs: 100 });
+      let changed = false;
+      for (let i = 0; i < 2; i++) changed = tickAdaptiveDpr(s, 50, HZ30) || changed;
+      expect(changed).toBe(true);
+      expect(s.current).toBe(1.75);
+    });
+
+    it('recovers on a 30 Hz display once frames keep pace', () => {
+      const s = createAdaptiveDprState({ deviceDpr: 2, highHoldMs: 100 });
+      s.current = 1.5;
+      for (let i = 0; i < 4; i++) tickAdaptiveDpr(s, HZ30, HZ30);
+      expect(s.current).toBe(1.75);
+    });
+
+    it('doubles the recovery hold when a step up does not hold', () => {
+      const s = createAdaptiveDprState({
+        deviceDpr: 2,
+        lowHoldMs: 100,
+        highHoldMs: 100,
+        maxHighHoldMs: 300,
+      });
+      s.current = 1.5;
+      for (let i = 0; i < 4; i++) tickAdaptiveDpr(s, HZ30, HZ30); // up to 1.75
+      for (let i = 0; i < 3; i++) tickAdaptiveDpr(s, 50, HZ30); // straight back down
+      expect(s.current).toBe(1.5);
+      expect(s.highHoldMs).toBe(200);
+      for (let i = 0; i < 7; i++) tickAdaptiveDpr(s, HZ30, HZ30);
+      for (let i = 0; i < 3; i++) tickAdaptiveDpr(s, 50, HZ30);
+      expect(s.highHoldMs).toBe(300);
+    });
+  });
 });

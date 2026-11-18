@@ -31,6 +31,10 @@ export function initDebugOverlay() {
       `draws ${rend.calls ?? '—'}  tris ${rend.triangles ?? '—'}  pts ${rend.points ?? '—'}\n` +
       `geom ${mem.geometries ?? '—'}  tex ${mem.textures ?? '—'}\n` +
       `pixelRatio ${m.pixelRatio?.toFixed(3) ?? '—'}  adaptive ${m.adaptiveDpr?.toFixed(3) ?? '—'}\n` +
+      `quality ${m.qLevel}${m.qMode === 'auto' ? ' auto' : ''}  cadence ${m.cadenceMs?.toFixed(1) ?? '—'} ms` +
+      (m.autoQuality
+        ? `  last ${m.autoQuality.meanMs.toFixed(1)} ms ${m.autoQuality.verdict}\n`
+        : '\n') +
       `buf ${m.canvasBuffer?.join('×') ?? '—'}  bloom ${m.useBloom ? 'on' : 'off'}`;
     requestAnimationFrame(tick);
   }

@@ -7,7 +7,7 @@ function hintText(L){
   if(fright>0) return tr('hint.fright',{seconds:Math.ceil(fright)});
   if(boostT>0) return tr('hint.berryBoost',{seconds:Math.ceil(boostT)});
   if(berry) return tr('hint.berryRipe');
-  if(L<0.35&&bats.some(g=>g.home===player.t&&(g.mode==='live'||g.mode==='wait')&&!g.asleep)) return tr('hint.batEyes');
+  if(L<0.35&&bats.some(g=>g.home===player.t&&g.mode==='live'&&!g.asleep)) return tr('hint.batEyes');
   if(dotsLeft<=CFG.radar) return tr('hint.lastBubbles');
   if(waypoint>=0) return tr('hint.waypoint',{num:tiles[waypoint].num});
   if(tiles[player.t].left===0) return tr('hint.islandDone');

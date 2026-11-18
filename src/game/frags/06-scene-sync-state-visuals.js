@@ -65,8 +65,9 @@ function syncEcology(){
   ecoTreeTrunk.instanceMatrix.needsUpdate=ti>0;
   ecoTreeTop.instanceMatrix.needsUpdate=ttop>0;
 }
+const _prismCol=new THREE.Color();
 function syncBubbles(time){
-  let nb=0, ng=0;
+  let nb=0, ng=0, np=0;
   for(const T of tiles){
     const p=tilePos(T), lf=liftOf(T), home=isHome(T);
     for(let i=0;i<N;i++){
@@ -76,7 +77,16 @@ function syncBubbles(time){
       if(v===1&&nb<BUB_MAX){
         _P.copy(_R).multiplyScalar(1+0.034+bob+lf);
         _M.makeScale(0.024*(1+0.04*wob),0.024*(1-0.04*wob),0.024*(1+0.04*wob)).setPosition(_P); bubbles.setMatrixAt(nb,_M);
-        const sc=home?0.0105:0.0075; _M.makeScale(sc,sc,sc).setPosition(_P); seeds.setMatrixAt(nb,_M); nb++;
+        const sc=home?0.0135:0.0102; _M.makeScale(sc,sc,sc).setPosition(_P); seeds.setMatrixAt(nb,_M); nb++;
+      } else if(v===DOT_PRISM&&np<PRISM_MAX&&ng<16){
+        // Prism bubble: bigger shell, spinning faceted core cycling through the rainbow.
+        _P.copy(_R).multiplyScalar(1+0.04+bob+lf);
+        _M.makeScale(0.031*(1+0.05*wob),0.031*(1-0.05*wob),0.031*(1+0.05*wob)).setPosition(_P); bigBubbles.setMatrixAt(ng,_M);
+        _Q.setFromUnitVectors(_Y,_R); _Q2.setFromAxisAngle(_R,time*2.2+i); _Q.premultiply(_Q2);
+        const ps=(home?0.021:0.0175)*(1+0.08*Math.sin(time*4+i)); _M.compose(_P,_Q,_S.set(ps,ps,ps)); prismSeeds.setMatrixAt(np,_M);
+        prismSeeds.setColorAt(np,_prismCol.setHSL(((time*0.35+i*0.13+T.id*0.21)%1+1)%1,1,0.55));
+        // Shell shares the sunstone mesh; keep gems in step with a zero-size gem.
+        _M.makeScale(0,0,0).setPosition(_P); gems.setMatrixAt(ng,_M); ng++; np++;
       } else if(v===2&&ng<16){
         _P.copy(_R).multiplyScalar(1+0.05+bob+lf);
         _M.makeScale(0.042,0.042,0.042).setPosition(_P); bigBubbles.setMatrixAt(ng,_M);
@@ -85,8 +95,9 @@ function syncBubbles(time){
       }
     }
   }
-  bubbles.count=seeds.count=nb; bigBubbles.count=gems.count=ng;
+  bubbles.count=seeds.count=nb; bigBubbles.count=gems.count=ng; prismSeeds.count=np;
   bubbles.instanceMatrix.needsUpdate=seeds.instanceMatrix.needsUpdate=bigBubbles.instanceMatrix.needsUpdate=gems.instanceMatrix.needsUpdate=true;
+  prismSeeds.instanceMatrix.needsUpdate=true; if(np&&prismSeeds.instanceColor) prismSeeds.instanceColor.needsUpdate=true;
 }
 function syncFrog(time,dt){
   const a=player, w=actorWorld(a), lift=actorLift(a);
@@ -108,7 +119,7 @@ function syncFrog(time,dt){
     else { const u=clamp((warpT-0.55)/0.95,0,1); sc*=Math.min(1,0.3+u*2.5); frog.hop.position.y=0.17*Math.sin(Math.PI*u); frog.hop.rotateX(0); frog.hop.rotation.x=-u*TAU; }
   } else frog.hop.rotation.x=0;
   frog.root.scale.setScalar(sc);
-  frog.root.visible=!(state==='play'&&invuln>0&&readyT<=0&&(Math.floor(time*12)&1));
+  frog.root.visible=!(state==='play'&&invuln>0&&readyT<=0&&(Math.floor(time*6)&1)&&invuln<0.8);
   // firefly companion lights the way at night
   const night=1-lightAt(w[0],w[1]), ang=time*2.3;
   firefly.position.copy(frog.root.position).addScaledVector(_R,0.085+0.01*Math.sin(time*3.1)).addScaledVector(_E,Math.cos(ang)*0.045).addScaledVector(_N,Math.sin(ang)*0.045);
@@ -119,7 +130,8 @@ function syncBats(time,dt){
   const pl=actorWorld(player);
   for(let i=0;i<batObjs.length;i++){
     const o=batObjs[i], g=bats[i];
-    if(!g||g.mode==='dead'||(g.mode==='gone'&&g.goneT>1.6)){ o.root.visible=false; o.zz.forEach(z=>z.visible=false); continue; }
+    // A bat still waiting to spawn can't catch Pip, so it isn't drawn (frag 07 marks its roost).
+    if(!g||g.mode==='dead'||g.mode==='wait'||(g.mode==='gone'&&g.goneT>1.6)){ o.root.visible=false; o.zz.forEach(z=>z.visible=false); continue; }
     if(g.mode==='gone'){ const w=actorWorld(g.a), t=g.goneT; o.yaw+=dt*3; poseObject(o.root,w[0],w[1],actorLift(g.a)+0.05+t*t*0.12,o.yaw); o.root.scale.setScalar(Math.max(0.01,1-t/1.6)); const f=0.12+0.7*Math.sin(gameClock*26+i); o.wings[0].rotation.z=-f; o.wings[1].rotation.z=f; o.zz.forEach(z=>z.visible=false); continue; }
     o.root.scale.setScalar(1);
     o.root.visible=true;
@@ -130,9 +142,10 @@ function syncBats(time,dt){
     o.yaw+=angD(ty-o.yaw)*Math.min(1,dt*8);
     const fl=scared?22:lerp(7,17,night);
     poseObject(o.root,w[0],w[1],lift+(g.asleep?0.024:0.05+0.007*Math.sin(time*3+i*1.7)),o.yaw);
-    let flap; if(g.asleep) flap=-1.25+0.04*Math.sin(time*1.5+i); else if(g.mode==='wait') flap=0.1+0.35*Math.sin(time*5+i); else flap=0.12+0.62*Math.sin(time*fl+i*2.1);
+    let flap; if(g.asleep) flap=-1.25+0.04*Math.sin(time*1.5+i); else flap=0.12+0.62*Math.sin(time*fl+i*2.1);
     o.wings[0].rotation.z=-flap; o.wings[1].rotation.z=flap;
-    const lid=g.asleep?0.08:(scared?1:lerp(0.4,1,smooth(clamp(night*1.4,0,1))));
+    // Awake bats keep their eyes open in daylight too: only sleeping (home) bats look asleep.
+    const lid=g.asleep?0.08:1;
     for(const e of o.eyes) e.scale.y=lid;
     for(const b of o.brows) b.visible=!g.asleep&&!scared;
     if(scared){ o.fur.color.copy(fright<2&&(Math.floor(time*6)&1)?o.flashC:o.scaredC); o.eyeM.emissive.copy(C_WHITE); o.eyeM.emissiveIntensity=1.2; o.body.position.set((Math.random()-0.5)*0.002,0,(Math.random()-0.5)*0.002); }
@@ -171,7 +184,8 @@ function placeCamera(){
   const dFar=farOrbitDistance(camera.aspect);
   _pB.copy(_e2).multiplyScalar(dFar); _tB.set(0,0,0); _uB.copy(_N2);
   camera.position.lerpVectors(_pA,_pB,z); _tC.lerpVectors(_tA,_tB,z);
-  if(shakeT>0&&!REDUCED){ const a=shakeT*0.03; camera.position.x+=(Math.random()-0.5)*a; camera.position.y+=(Math.random()-0.5)*a; camera.position.z+=(Math.random()-0.5)*a; }
+  // Smooth shake (summed sines) instead of per-frame random jitter, which read as a glitch.
+  if(shakeT>0&&!REDUCED){ const a=shakeT*0.015, t=performance.now()*0.04; camera.position.x+=Math.sin(t*1.31)*a; camera.position.y+=Math.sin(t*1.73+1.1)*a; camera.position.z+=Math.sin(t*2.17+2.3)*a; }
   camera.up.lerpVectors(_uA,_uB,z).normalize(); camera.lookAt(_tC);
   camera.fov=lerp(CAMERA.fovCloseDeg,CAMERA.fovFarDeg,z); camera.updateProjectionMatrix();
 }
@@ -206,8 +220,9 @@ function render(){
     renderer.shadowMap.needsUpdate=shadowDirty||shouldUpdateShadowMap({shadowsEnabled:true,gameState:state,paused:paused||uiHold,tilesAnimating:tiles.some(t=>t.anim)});
     shadowDirty=false;
   }
+  if(useBloom&&!composer&&pendingComposer) adoptPendingComposer();
   if(useBloom&&composer) composer.render();
-  else if(useBloom&&!composer) { ensurePostPipeline(); renderer.render(scene,camera); }
+  else if(useBloom&&!composer) { ensurePostPipeline().catch(()=>{}); renderer.render(scene,camera); }
   else renderer.render(scene,camera);
   lastFrameDrawCalls=renderer.info.render.calls;
 }

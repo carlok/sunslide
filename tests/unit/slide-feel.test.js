@@ -7,6 +7,7 @@ import {
   movableTileIds,
   screenDragPull,
   slideDeltaToHole,
+  slideProgressFrom,
   slideSnapDurationSeconds,
   slideSnapProgress,
 } from '../../src/logic/slide-feel.js';
@@ -62,5 +63,27 @@ describe('slide-feel', () => {
   it('screenDragPull clamps', () => {
     expect(screenDragPull(0)).toBe(0);
     expect(screenDragPull(88, 44)).toBe(1);
+  });
+});
+describe('slide continuing from the preview', () => {
+  it('starts where the preview left the island and ends in the hole', () => {
+    const e0 = ghostPreviewBlend(0.12);
+    expect(slideProgressFrom(e0, 0)).toBeCloseTo(e0, 10);
+    expect(slideProgressFrom(e0, 1)).toBeCloseTo(1, 10);
+  });
+
+  it('only moves forward', () => {
+    let prev = -1;
+    for (let t = 0; t <= 1.0001; t += 0.05) {
+      const e = slideProgressFrom(0.3, t);
+      expect(e).toBeGreaterThanOrEqual(prev);
+      prev = e;
+    }
+  });
+
+  it('matches a plain slide without a preview and clamps bad input', () => {
+    expect(slideProgressFrom(0, 0.5)).toBeCloseTo(slideProgressFrom(undefined, 0.5), 10);
+    expect(slideProgressFrom(5, 0)).toBe(1);
+    expect(slideProgressFrom(0.2, 0.5, true)).toBeCloseTo(0.2 + 0.8 * 0.5, 10);
   });
 });

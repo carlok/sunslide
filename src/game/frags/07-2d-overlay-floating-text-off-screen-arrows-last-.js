@@ -13,11 +13,50 @@ function edgeArrow(target,color,time,label){
   fctx.beginPath(); fctx.moveTo(11*k,0); fctx.lineTo(-7*k,-9*k); fctx.lineTo(-3*k,0); fctx.lineTo(-7*k,9*k); fctx.closePath(); fctx.fill(); fctx.restore();
   if(label){ fctx.save(); fctx.font=`800 ${11*fxDpr}px system-ui,sans-serif`; fctx.textAlign='center'; fctx.textBaseline='middle'; fctx.fillStyle=color; fctx.shadowColor='rgba(0,0,0,.8)'; fctx.shadowBlur=4*fxDpr; fctx.fillText(label,x-c*20*fxDpr,y-s*20*fxDpr); fctx.restore(); }
 }
+const _fxA=new THREE.Vector3(), _fxB=new THREE.Vector3();
+// Screen-space radius (px) of a world-space radius around v, so overlay rings follow the zoom.
+function screenRadius(v,worldR,s){ _fxB.setFromMatrixColumn(camera.matrixWorld,0).multiplyScalar(worldR).add(v); const b=proj(_fxB); return Math.hypot(b[0]-s[0],b[1]-s[1]); }
+// Client-space position of a slot's centre, or null when it is off screen / behind the planet.
+function slotClientPos(c,r){
+  frameAt(c*TW+TW/2,r*TH+TH/2); _fxA.copy(_R); const s=onScreen(_fxA); if(!s) return null;
+  const rc=fxc.getBoundingClientRect(); return [rc.left+s[0]*rc.width/fxc.width, rc.top+s[1]*rc.height/fxc.height];
+}
+// Unit screen direction from an island to the empty meadow, for drag-to-slide.
+function holeScreenDir(id){
+  const T=tiles[id], h=findHole(); if(!T||!h) return null;
+  const a=slotClientPos(T.slot.c,T.slot.r), b=slotClientPos(h.c,h.r); if(!a||!b) return null;
+  const vx=b[0]-a[0], vy=b[1]-a[1], l=Math.hypot(vx,vy); return l>4?[vx/l,vy/l]:null;
+}
+function drawBatRoosts(time){
+  // A bat that hasn't spawned yet is invisible and harmless; mark its roost with a ring in its eye colour
+  // that pulses faster as it gets ready, so the pop-in is expected.
+  for(const g of bats){
+    if(g.mode!=='wait') continue;
+    _fxA.copy(actorPos(g.a,0.008)); const s=onScreen(_fxA,6*fxDpr); if(!s) continue;
+    const ready=1-clamp(g.timer/2.5,0,1), r=Math.max(4*fxDpr,screenRadius(_fxA,0.026,s));
+    const pulse=0.5+0.5*Math.sin(time*(3+10*ready)+g.idx);
+    fctx.save(); fctx.globalAlpha=0.35+0.5*ready;
+    fctx.fillStyle='rgba(14,6,30,.45)'; fctx.beginPath(); fctx.arc(s[0],s[1],r*(0.85+0.15*pulse),0,TAU); fctx.fill();
+    fctx.strokeStyle=BATCOL[g.type%BATCOL.length]; fctx.lineWidth=1.6*fxDpr; fctx.setLineDash([3*fxDpr,3*fxDpr]); fctx.lineDashOffset=-time*12*fxDpr;
+    fctx.beginPath(); fctx.arc(s[0],s[1],r*(1+0.25*pulse),0,TAU); fctx.stroke(); fctx.restore();
+  }
+}
+function drawShield(time,dt){
+  shieldFlash=Math.max(0,shieldFlash-dt);
+  if(state!=='play'||invuln<=0) return;
+  _fxA.copy(actorPos(player,0.03)); const s=onScreen(_fxA); if(!s) return;
+  const r=screenRadius(_fxA,0.062,s), fade=Math.min(1,invuln/0.8), f=shieldFlash/0.35;
+  fctx.save(); fctx.globalAlpha=fade;
+  fctx.fillStyle=`rgba(150,232,255,${0.08+0.18*f})`; fctx.beginPath(); fctx.arc(s[0],s[1],r*(1+0.18*f),0,TAU); fctx.fill();
+  fctx.strokeStyle=`rgba(170,240,255,${0.5+0.45*f})`; fctx.lineWidth=(2+2*f)*fxDpr; fctx.beginPath(); fctx.arc(s[0],s[1],r*(1+0.04*Math.sin(time*5)+0.18*f),0,TAU); fctx.stroke();
+  fctx.restore();
+}
 function ring(s,color,r,time){ fctx.strokeStyle=color; fctx.lineWidth=2*fxDpr; fctx.beginPath(); fctx.arc(s[0],s[1],(r+3*Math.sin(time*6))*fxDpr,0,TAU); fctx.stroke(); }
 function nearestBubble(){ const pp=actorPos(player,0).normalize(); let best=null,bd=-2; for(const T of tiles){ if(!T.left) continue; for(let i=0;i<N;i++) if(T.dots[i]){ const v=cellWorld(T.id,i%TW,(i/TW)|0,0.035), d=v.clone().normalize().dot(pp); if(d>bd){bd=d;best=v;} } } return best; }
 function drawFx(time,dt){
   const W=fxc.width,H=fxc.height; fctx.clearRect(0,0,W,H);
   if(state==='play'||state==='dying'){
+    drawBatRoosts(time); drawShield(time,dt);
     const h=findHole(); frameAt(h.c*TW+TW/2,h.r*TH+TH/2); const hp=_R.clone();
     if(!onScreen(hp,10*fxDpr)) edgeArrow(hp,'#8be04a',time);
     if(sink&&sink.phase!=='close'){ const v=cellWorld(sink.t,sink.x,sink.y,0.01), sc=onScreen(v,8*fxDpr); if(sc) ring(sc,sink.phase==='warn'?'rgba(255,90,90,.95)':'rgba(190,120,255,.9)',14,time*2); }

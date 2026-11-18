@@ -68,9 +68,14 @@ import {
   PALETTE_COLOR_BLIND,
   PALETTE_STANDARD,
   highlightTheme,
+  BUBBLE_COLORS,
+  FLOOR_SPECKS,
 } from './src/logic/visual-theme.js';
+import { DOT_PRISM, isBubbleDot, prismCountForLevel } from './src/logic/bubbles.js';
+import { popScore } from './src/logic/scoring.js';
 import {
   slideSnapProgress,
+  slideProgressFrom,
   slideSnapDurationSeconds,
   slideLiftAtProgress,
   ghostPreviewBlend,
@@ -103,6 +108,14 @@ import {
   syncAdaptiveCap,
   tickAdaptiveDpr,
 } from './src/logic/adaptive-pixel-ratio.js';
+import { createFrameCadence, observeFrameCadence } from './src/logic/frame-cadence.js';
+import {
+  createAutoQuality,
+  pauseAutoQuality,
+  restartAutoQuality,
+  tickAutoQuality,
+} from './src/logic/auto-quality.js';
+import { isCaught } from './src/logic/catch.js';
 import { t as tr } from './src/i18n/index.js';
 
 const settingsStore = createStore();
@@ -110,13 +123,19 @@ const haptics = createHaptics();
 let mapEligLitPrefix = 'rgba(255,210,94,';
 let mapEligDarkStroke = 'rgba(127,140,255,0.85)';
 
+let paletteIsColorBlind = false;
 function applyColorBlindPalette(cb) {
   const src = cb ? PALETTE_COLOR_BLIND : PALETTE_STANDARD;
+  const changed = !!cb !== paletteIsColorBlind;
+  paletteIsColorBlind = !!cb;
   for (let i = 0; i < NT; i++) PALETTE[i] = src[i];
   applyRendererTheme(cb);
   const t = highlightTheme(!!cb);
   mapEligLitPrefix = t.mapEligLit;
   mapEligDarkStroke = cb ? 'rgba(94,176,255,0.9)' : 'rgba(127,140,255,0.85)';
+  // Floors, cliff lips and moss caps are baked from PALETTE / the theme; repaint them now
+  // rather than at the next sector.
+  if (changed && tiles?.length) repaintTilesForPalette();
   if (tiles?.length) refreshTiles();
 }
 
@@ -128,7 +147,7 @@ function applySettings(s) {
   if (s.quality !== undefined) {
     qMode = s.quality;
     qLevel = qLevelFor(s.quality);
-    perfStart = performance.now();
+    perfRestart();
     applyQuality();
   }
   if (s.colorBlind !== undefined) applyColorBlindPalette(s.colorBlind);
@@ -137,11 +156,28 @@ function applySettings(s) {
 
 window.__ssBoot = true;
 
-let composer=null, postPipelinePromise=null;
+let composer=null, postPipelinePromise=null, pendingComposer=null;
 function ensurePostPipeline(){
-  if(composer) return postPipelinePromise||Promise.resolve(composer);
-  postPipelinePromise=createPostPipeline(renderer,scene,camera).then((p)=>{ composer=p.composer; if(typeof resize==='function') resize(); return composer; });
+  // render() asks every frame until bloom is ready: keep a single load in flight.
+  if(postPipelinePromise) return postPipelinePromise;
+  postPipelinePromise=createPostPipeline(renderer,scene,camera).then(async (p)=>{
+    // Scene shaders differ when drawn into a render target (no tone mapping / linear output), so the
+    // switch to bloom used to recompile every material on the frame it happened. Compile those
+    // variants now, off the critical path; compile() is synchronous, so restore the target at once.
+    try{ await compileAllShaders(p.composer.readBuffer,true); }catch(e){ /* compile warm-up is best effort */ }
+    pendingComposer=p.composer;
+    adoptPendingComposer();
+    return p.composer;
+  }).catch((e)=>{ postPipelinePromise=null; throw e; });
   return postPipelinePromise;
+}
+// Bloom changes the look of the whole frame; switch it on outside active play (title, pause, menu,
+// game over, sector change) so it never pops in mid-run.
+function adoptPendingComposer(){
+  if(!pendingComposer) return;
+  if(state==='play'&&!paused&&!uiHold) return;
+  composer=pendingComposer; pendingComposer=null;
+  if(typeof resize==='function') resize();
 }
 function schedulePostPipelineLoad(){
   if(!useBloom||composer) return;
@@ -179,6 +215,7 @@ export function startSunslide() {
   applySettings(settingsFromStore(settingsStore));
   newLevel();
   applyQuality();
+  warmHiddenShaders();
   schedulePostPipelineLoad();
   const bestEl = document.getElementById('bestline');
   if (bestEl) bestEl.textContent = formatBestLine(loadStoredRunBest(store));
@@ -239,7 +276,7 @@ export function startSunslide() {
       readyT = 0;
       invuln = 1e9;
       zoomT = 1;
-      perfStart = performance.now();
+      perfRestart();
       if (typeof refreshShadowMap === 'function') refreshShadowMap();
       $('ov').classList.add('hide');
       $('wBlock').classList.add('hide');
@@ -269,8 +306,12 @@ export function startSunslide() {
     get bats() { return bats; },
     get player() { return player; },
     get dotsLeft() { return dotsLeft; },
+    get inv() { return invuln; },
     set inv(v) { invuln = v; },
     set lives(v) { lives = v; },
+    get fright() { return fright; },
+    set fright(v) { fright = v; },
+    batVisible(i) { return !!(batObjs[i] && batObjs[i].root.visible); },
     killNow() { if (state === 'play') { invuln = 0; die(); } },
     clearIsland(id) {
       const T = tiles[id];
@@ -288,7 +329,7 @@ export function startSunslide() {
     get sunLon() { return sunLon; },
     set sunLon(v) { sunLon = v; },
     get zoom() { return [zoomT, zoomTarget, viewFar]; },
-    setQuality(l) { qMode = l; qLevel = qLevelFor(l); applyQuality(); },
+    setQuality(l) { qMode = l; qLevel = qLevelFor(l); perfRestart(); applyQuality(); },
     get greenedCount() { return ecologyCount(ecologyState); },
     get greenProgress() { return currentGreenPercent(); },
     get initialGreenTarget() { return initialGreenTarget; },
@@ -305,7 +346,7 @@ export function startSunslide() {
       const T = tiles[t];
       if (!T) return ecologyCount(ecologyState);
       const i = y * TW + x;
-      if (T.dots[i] === 1) eatAt(t, x, y);
+      if (isBubbleDot(T.dots[i])) eatAt(t, x, y);
       return ecologyCount(ecologyState);
     },
     getRenderMetrics() {
@@ -316,10 +357,15 @@ export function startSunslide() {
         pixelRatio,
         drawCalls: lastFrameDrawCalls,
         adaptiveDpr: adaptiveDprState.current,
+        cadenceMs: frameCadence.ms,
+        autoQuality: autoQ.last,
         stageCss: [stageEl.clientWidth, stageEl.clientHeight],
         canvasBuffer: [glc.width, glc.height],
         composerRT: composer ? [composer.renderTarget1.width, composer.renderTarget1.height] : null,
         postPipelineReady: !!composer,
+        postPipelinePending: !!pendingComposer,
+        viewOffsetY: camera.view && camera.view.enabled ? camera.view.offsetY : 0,
+        programs: renderer.info.programs ? renderer.info.programs.length : null,
         info: renderer.info,
       };
     },

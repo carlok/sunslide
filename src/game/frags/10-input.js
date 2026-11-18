@@ -4,6 +4,8 @@ function setPaused(p){
   const was=paused;
   paused=p; renderedPaused=false; $('pause').classList.toggle('hide',!p); syncButtons();
   if(!p&&typeof refreshShadowMap==='function') refreshShadowMap();
+  // Resume from the current time: otherwise the first frame runs a clamped 50 ms catch-up step.
+  if(!p&&was&&typeof onDocumentVisible==='function') onDocumentVisible();
   if(AUD.ac){ try{ p?AUD.ac.suspend():AUD.ac.resume(); }catch(e){} }
   if(typeof wakeRenderLoop==='function') wakeRenderLoop();
   // Keyboard users land on RESUME when the pause panel opens, and go back where they were after.
@@ -23,6 +25,7 @@ function setUiHold(key,on){
   if(next===uiHold) return;
   uiHold=next; renderedPaused=false;
   if(!next&&typeof refreshShadowMap==='function') refreshShadowMap();
+  if(!next&&typeof onDocumentVisible==='function') onDocumentVisible();
   if(typeof wakeRenderLoop==='function') wakeRenderLoop();
 }
 function setView(far){ viewFar=far; store.set('viewFar',far); syncButtons(); }
@@ -90,7 +93,11 @@ function updateSlidePreview(e,pullOverride){
   const id=slotGrid[r][c]; if(id<0) return;
   const {dc,dr}=slideDeltaToHole(c,r,findHole());
   let pull=pullOverride!=null?pullOverride:0.22;
-  if(slideDrag&&slideDrag.id===id) pull=Math.max(pull,screenDragPull(Math.hypot(e.clientX-slideDrag.x0,e.clientY-slideDrag.y0)));
+  if(slideDrag&&slideDrag.id===id){
+    // Only the part of the drag that heads for the empty meadow pulls the island.
+    const ddx=e.clientX-slideDrag.x0, ddy=e.clientY-slideDrag.y0, dir=holeScreenDir(id);
+    pull=Math.max(pull,screenDragPull(dir?Math.max(0,ddx*dir[0]+ddy*dir[1]):Math.hypot(ddx,ddy)));
+  }
   slidePreview={id,fc:c,fr:r,dc,dr,pull};
 }
 function clearSlidePreview(){ slidePreview=null; slideDrag=null; }
@@ -105,10 +112,16 @@ stageEl.addEventListener('pointerdown',e=>{
   updateSlidePreview(e,slideDrag?0.12:null);
 });
 function endPtr(e,cancel){
-  if(e.pointerId!==sid) return; sid=-1; slideDrag=null;
+  if(e.pointerId!==sid) return; sid=-1; const drag=slideDrag; slideDrag=null;
   if(cancel||paused){ clearSlidePreview(); return; }
-  const dx=e.clientX-sx0, dy=e.clientY-sy0;
-  if(Math.hypot(dx,dy)>24){ clearSlidePreview(); want=Math.abs(dx)>Math.abs(dy)?(dx>0?1:3):(dy>0?2:0); return; }
+  const dx=e.clientX-sx0, dy=e.clientY-sy0, len=Math.hypot(dx,dy);
+  if(len>24){
+    // A drag that started on a slidable island and heads for the empty meadow slides it (the preview
+    // already showed it moving); any other swipe steers Pip.
+    const dir=drag?holeScreenDir(drag.id):null;
+    if(dir&&(dx*dir[0]+dy*dir[1])/len>0.6){ const T=tiles[drag.id], msg=trySlide(T.slot.c,T.slot.r); clearSlidePreview(); if(msg){ say(tr(msg),1200); SFX.nope(); } return; }
+    clearSlidePreview(); want=Math.abs(dx)>Math.abs(dy)?(dx>0?1:3):(dy>0?2:0); return;
+  }
   tapAt(e); clearSlidePreview();
 }
 stageEl.addEventListener('pointerup',e=>endPtr(e,false));
@@ -154,7 +167,7 @@ $('resume').addEventListener('click',()=>setPaused(false));
 $('sBtn').addEventListener('click',()=>setMuted(!AU.muted));
 $('vBtn').addEventListener('click',()=>setView(!viewFar));
 $('restart').addEventListener('click',()=>{ setPaused(false); startGame(); });
-$('qBtn').addEventListener('click',()=>{ const order=['auto',2,1,0]; qMode=order[(order.indexOf(qMode)+1)%order.length]; store.set('quality',qMode); qLevel=qLevelFor(qMode); perfStart=performance.now(); applyQuality(); });
+$('qBtn').addEventListener('click',()=>{ const order=['auto',2,1,0]; qMode=order[(order.indexOf(qMode)+1)%order.length]; store.set('quality',qMode); qLevel=qLevelFor(qMode); perfRestart(); applyQuality(); });
 document.addEventListener('visibilitychange',()=>{
   if(document.hidden){
     if(state==='play'||state==='warp'||state==='dying') setPaused(true);

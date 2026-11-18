@@ -12,19 +12,24 @@
 
 | ID | Area | Item | Size | Priority |
 |----|------|------|------|----------|
-| L1 | Look | Organic ecology floor patches (uniform green boxes) | **M** | **P0** — in flight as separate PR |
+| L1 | Look | Organic ecology floor patches (uniform green boxes) — **done** (#46) | **M** | **P0** |
 | L2 | Look | Ecology patch / grass hue tied to color-blind palette | S | P2 |
 | L3 | Look | Bloom pass cost vs marginal benefit on Low/Medium | M | P2 |
 | G1 | GPU | Draw-call batching for instanced decor (eco + bloom) | L | P3 |
 | G2 | GPU | Shadow map tiering (High = 2048 in `QUAL` vs policy cap 1024) — **done**: `QUAL[2].shadow` = 1024 | S | P1 |
 | G3 | GPU | Auto quality: cadence-aware step-down + re-upgrade with backoff — **done** | S | P2 |
 | G4 | GPU | Pause / menu render idling (`renderIdle` policy) | S | P2 |
-| U1 | UX | Centralise UI copy for forks (`sunslide-ko`) | **M** | **P1** |
+| U1 | UX | Centralise UI copy for forks (`sunslide-ko`) — **done**: en/it/ko tables (#47) | **M** | **P1** |
 | U2 | UX | Tutorial copy vs HUD toast timing | S | P2 |
 | U3 | UX | Map tap target on coarse pointers | S | P1 |
 | U4 | UX | Win / clear overlays keyboard focus trap audit | S | P2 |
-| F1 | Feel | Slide snap duration vs `CFG.slideCool` (0.45 s / 0.3 s) | S | P2 |
+| F1 | Feel | Slide snap duration vs `CFG.slideCool` (real snap is 170 ms via `SLIDE_SNAP_MS`; `CFG.slideT` is unused) — slides now continue from the hover/drag preview instead of hopping back | S | P2 |
 | F2 | Feel | Haptics on bubble collect (already wired) — expose in tutorial | S | P3 |
+| B1 | Rules | Visible awake bat = can catch (hidden spawn wait + roost ring, shield bounce, sphere contact, gone stays gone) — **done** | S | P1 |
+| B2 | Look | Bubble seed contrast (hot pink, rim ink, no yellow specks) + rare prism bubbles — **done**, guarded by `bubble-contrast.test.js` | S | P1 |
+| G5 | GPU | No mid-play shader compiles: warm all objects at boot, bloom variants compiled before the deferred swap, tile materials kept across sectors — **done** | S | P1 |
+| G6 | GPU | Resize via rAF (no blank frame from `ResizeObserver`), `pow` NaN guards for bloom — **done** | S | P1 |
+| U5 | UX | Phone portrait: view offset keeps Pip above the minimap — **done** | S | P1 |
 
 **Legend:** Size S ≈ hours, M ≈ 1–2 dev days, L ≈ multi-day. Priority P0–P3.
 
@@ -61,7 +66,7 @@ Performance is intentionally capped by WebGL fidelity (three.js planet + post bl
 
 | Parameter | Location | Value |
 |-----------|----------|-------|
-| Slide animation | `CFG.slideT` (`01-config-helpers.js`) | **0.45 s** |
+| Slide animation | `SLIDE_SNAP_MS` (`src/logic/slide-feel.js`; `CFG.slideT` is unused) | **170 ms** (80 ms reduced motion) |
 | Post-slide cooldown | `CFG.slideCool` | **0.3 s** |
 | Hop speed | `CFG.pSpeed` | **4.2** cells/s equivalent |
 | Slide duration override | `slideSnapDurationSeconds(REDUCED)` | Shorter when reduced motion |
